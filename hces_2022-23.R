@@ -29,14 +29,14 @@ names(data_list) <- tools::file_path_sans_ext(file_list)
 
 ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
 ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
-plot(ind_admin2$geometry)
+plot(ind_state$geometry)
 
 # AFE CALCUTATION ##############################################################
 
 # filter only 6 states
 level01 <- data_list$level01 %>% 
-  filter(state %in% c("03","06", "08","09", "10", "22"))
-# c("02", "03","06","07", "08","09", "10","19","20","21", "22","23","28","34","36")
+  filter(state %in% c("02", "03","06","07", "08","09", "10","19","20","21", "22","23","28","34","36"))
+# 
 level02 <- data_list$level02 %>% 
   filter(common_id %in% level01$common_id)
 
@@ -132,8 +132,9 @@ level05_30day <-
 conversion_factor <- read_csv("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/conversion_factors.csv")
 
 level05_7day <- level05 %>% 
-  filter(!(Item_Code %in% level05_30day$Item_Code)) %>% 
   mutate(Item_Code = as.numeric(Item_Code)) %>% 
+  filter(!(Item_Code %in% level05_30day$Item_Code)) %>% 
+  
   left_join(conversion_factor, by= 'Item_Code') %>% 
   left_join(ind_202223_fct %>% select(item_code, edible_portion), by = c("Item_Code" = "item_code")) %>% 
   mutate(Total_Consumption_Quantity = 
@@ -141,7 +142,7 @@ level05_7day <- level05 %>%
   select(-c(item_name, conversion_factor_to_kg, edible_portion)) %>% 
   mutate(Total_Consumption_Quantity = (Total_Consumption_Quantity/7)*1000) %>% 
   left_join(hh_afe, by = "common_id") %>% 
-  mutate(Total_Consumption_Quantity = Total_Consumption_Quantity/afe) 
+  mutate(Total_Consumption_Quantity = Total_Consumption_Quantity/afe)
   # set all 
 
 level05_7day %>%  filter(Item_Code == 002)
@@ -162,14 +163,9 @@ y = level05_30day %>%
 
 ################################################################################
 
-food_consumption_daily_afe <- level05_7day %>% 
-              mutate(Item_Code = as.numeric(Item_Code))
-
-
-
-food_consumption_daily_afe %>% 
-  inner_join(ind_202223_fct, by=c("Item_Code" ="item_code" )) %>% 
-  mutate(quantity_100g = Total_Consumption_Quantity/100)
+food_consumption_daily_afe <- 
+  bind_rows(level05_7day %>% mutate(Item_Code = as.numeric(Item_Code)),
+            level05_30day)
 
 
 unmerged <- anti_join(food_consumption_daily_afe, ind_202223_fct, by=c("Item_Code" ="item_code" )) %>% 
@@ -184,8 +180,9 @@ hh_mn_intake <- food_consumption_daily_afe %>%
          energy_kcal = energy_kcal*quantity_100g,
          folate_ug = folate_ug*quantity_100g,
          iron_mg = iron_mg*quantity_100g,
-         vitaminb12_in_mcg = vitaminb12_in_mcg*quantity_100g) %>% 
-  select(common_id, energy_kcal,folate_ug,iron_mg,vitaminb12_in_mcg) %>% 
+         vitaminb12_in_mcg = vitaminb12_in_mcg*quantity_100g,
+         vitb1_mg  = vitb1_mg* quantity_100g) %>% 
+  select(common_id, energy_kcal,folate_ug,iron_mg,vitaminb12_in_mcg, vitb1_mg) %>% 
   group_by(common_id) %>% 
   summarise(
     across(
@@ -206,36 +203,27 @@ summary(hh_mn_intake$energy_kcal)
 # join to hh state information
 
 
-nss_region_shp <- level01 %>% 
-  distinct(state,nss_region,district) %>% 
-  mutate(district = as.numeric(paste0(state, district))) %>% 
-  left_join(ind_admin2,by = c('district' = "adm2_code")) %>% 
-  group_by(nss_region) %>% 
-  mutate(geometry = sf::st_union(geometry)) %>% 
-  slice(1)
 
-plot(nss_region_shp$geometry)
 
-hh_mn_intake %>% 
-  left_join(level01, by = "common_id") %>% 
-  mutate(district = as.numeric(paste0(state, district)))
-  # group_by(state,nss_region, district)
+
+
+
   
 new_shapefile <- st_read("C:/Users/gabriel.battcock/Downloads/india_adm2_shp/DISTRICT_BOUNDARY.shp")
-
-ind_sahpefile_names <- new_shapefile %>% 
-  select(District, STATE,State_LGD, DISTRICT_L) %>% 
-  st_drop_geometry() %>% 
-  filter(State_LGD == 07)
-
-delhi <- new_shapefile%>% 
-  select(District, STATE,State_LGD, DISTRICT_L) %>% 
-  filter(State_LGD == 07)
-plot(delhi$geometry)
+# 
+# ind_sahpefile_names <- new_shapefile %>% 
+#   select(District, STATE,State_LGD, DISTRICT_L) %>% 
+#   st_drop_geometry() %>% 
+#   filter(State_LGD == 07)
+# 
+# delhi <- new_shapefile%>% 
+#   select(District, STATE,State_LGD, DISTRICT_L) %>% 
+#   filter(State_LGD == 07)
+# plot(delhi$geometry)
 
 nss2223_shp_dictionary <- read.csv("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_new_shapefile.csv")
 
-nss_region_shapefile <- x <-  level01 %>% 
+nss_region_shapefile <-   level01 %>% 
   distinct(state,nss_region,district) %>% 
   mutate(district = as.numeric(paste0(state, district)),
          state = as.numeric(state),
@@ -251,21 +239,26 @@ plot(nss_region_shapefile$geometry,col = "red")
   
 # sf::st_write(nss_region_shapefile, "C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
   
-
-
+state <- new_shapefile %>% 
+  group_by(State_LGD) %>% 
+  mutate(geometry = sf::st_union(geometry)) %>% 
+  ungroup() 
   
+
+plot(state$geometry, col = 'red')
 
 # write.csv(x, "C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_new_nss_shapefile.csv")
 
 
 ################################################################################
 # BASE CASE
-
+source(here::here("../MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"))
 
 nss_region_inad <- hh_mn_intake %>% 
   mutate(
     folate_inad = ifelse(folate_ug < 250, 1,0),
-    vitb12_inad = ifelse(vitaminb12_in_mcg< 2, 1,0)
+    vitb12_inad = ifelse(vitaminb12_in_mcg< 2, 1,0),
+    thia_inad = ifelse(vitb1_mg<0.9, 1,0)
   ) %>% 
   left_join(level01 %>% 
               mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
@@ -273,9 +266,18 @@ nss_region_inad <- hh_mn_intake %>%
   srvyr::group_by(nss_region) %>% 
   summarise(
     folate_inad = srvyr::survey_mean(folate_inad == 1, proportion=TRUE),
-    vitb12_inad = srvyr::survey_mean(vitb12_inad == 1, proportion=TRUE)
-    
+    vitb12_inad = srvyr::survey_mean(vitb12_inad == 1, proportion=TRUE),
+    thia_inad = srvyr::survey_mean(thia_inad == 1, proportion=TRUE)
+  ) %>% 
+  left_join(
+    fe_full_prob(hh_mn_intake %>% 
+               rename(ai_afe = iron_mg) %>% 
+               left_join(level01, by="common_id"), group1 = nss_region, bio_avail = 10) %>% 
+      rename(nss_region = subpopulation,
+         fe_inad = prev_inad),
+    by = 'nss_region'
   )
+
 
 nss_region_inad_sp <- nss_region_inad %>% 
   mutate(nss_region = as.numeric(nss_region)) %>% 
@@ -283,9 +285,14 @@ nss_region_inad_sp <- nss_region_inad %>%
   st_as_sf()
 
 
+
+
+
 # create the map
+# tm_shape(ind_state)+
+#   tm_borders(col = 'white')+
 tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "vitb12_inad", style = "cont", breaks = seq(0,1,by=.10),
+  tm_fill(col = "fe_inad", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
           legend.is.portrait = FALSE
@@ -295,12 +302,22 @@ tm_shape(nss_region_inad_sp) +
             legend.outside.position = "bottom",
             legend.outside.size = 0.35
   ) +
-  tm_borders(col = "black", lwd = 0) +
-  # tm_shape(india_adm1) +
+  tm_borders(col = "black", lwd = 0.2) +
+  tm_shape(ind_state) +
   # tm_fill(col = "state") +
-  # tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = T)
+  tm_borders(col = "black", lwd = 2)+
+  tm_legend(show = T) 
+  
+  
+################################################################################
 
 
+  
+level05_30day %>% 
+  #filter only pds rice and free rice and other sources
+  filter(Item_Code %in% c(061,101,102)) %>% 
+  mutate(
+    
+  )
 
         
