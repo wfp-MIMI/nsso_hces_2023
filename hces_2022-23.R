@@ -335,7 +335,7 @@ ind_fort_spec <-
     vitb6_mg_fort_wfp = c(0.6,0.6),
     folate_mcg_fort_wfp = c(130,130),
     vitb12_mcg_fort_wfp = c(1,1),
-    fe_mg_fort_wfp = c(4,4),
+    fe_mg_fort_wfp = c(7,7),
     zn_mg_fort_wfp = c(6,6)
     
   )
@@ -385,6 +385,7 @@ hh_mn_intake_fort <- hh_mn_intake%>%
          thia_mg_fort_wfp = vitb1_mg+thia_mg_fort_wfp,
          vitb12_mcg_fort_wfp = vitaminb12_in_mcg+vitb12_mcg_fort_wfp)
 
+
 # tolerable UL
 wfp_ul <- hh_mn_intake_fort %>% 
   ggplot(aes(x = iron_mg_fort_wfp))+
@@ -398,9 +399,22 @@ wfp_ul <- hh_mn_intake_fort %>%
        subtitle  = "(fortified to internationally recommended standards)",
        caption = "0.1% of households above UL")
 
+wfp_ul <- hh_mn_intake_fort %>% 
+  ggplot(aes(x = iron_mg))+
+  geom_histogram()+
+  geom_vline(aes(xintercept = 45), color = 'red')+
+  geom_text(x = 53, y = 15000, label = "Tolerable upper limit")+
+  # xlim(0,75)+
+  theme_bw()+
+  xlab("Iron intake (mg)") + 
+  labs(title = "Iron intake",
+       subtitle  = "(fortified to internationally recommended standards)"
+       )
+
 hh_mn_intake_fort %>% 
   summarise(sum(iron_mg_fort_wfp>45)/n(),
-            sum(iron_mg_fort>45)/n())
+            sum(iron_mg_fort>45)/n(),
+            sum(iron_mg>45)/n())
 
 ind_ul <- hh_mn_intake_fort %>% 
   ggplot(aes(x = iron_mg_fort))+
@@ -542,6 +556,14 @@ state_inad <- hh_mn_intake_fort %>%
       rename(state = subpopulation,
              fe_inad_fort = prev_inad),
     by = 'state'
+  ) %>% 
+  left_join(
+    fe_full_prob(hh_mn_intake_fort %>% 
+                   rename(ai_afe = iron_mg_fort_wfp) %>% 
+                   left_join(level01, by="common_id"), group1 = state, bio_avail = 10) %>% 
+      rename(state = subpopulation,
+             fe_inad_fort_wfp = prev_inad),
+    by = 'state'
   )
 
 
@@ -584,7 +606,9 @@ nss_region_inad_sp <- nss_region_inad %>%
 #   tm_borders(col = 'white')+
 
 
-folate_map <- tm_shape(nss_region_inad_sp) +
+folate_map <- tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
     tm_fill(col = "folate_inad", style = "cont", breaks = seq(0,100,by=10),
             palette = (wesanderson::wes_palette("Zissou1Continuous")),
             title = "Prevalence of inadequacy" ,
@@ -597,13 +621,15 @@ folate_map <- tm_shape(nss_region_inad_sp) +
     ) +
     # tm_borders(col = "black", lwd = 0.2) +
     tm_shape(ind_state) +
-    tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
+    tm_text("State_Name", size = 0.6, remove.overlap = TRUE)+
     # tm_fill(col = "state") +
-    tm_borders(col = "black", lwd = 2)+
+    tm_borders(col = "black", lwd = 1.5)+
     tm_legend(show =F)
   
 
-folate_fort_map <- tm_shape(nss_region_inad_sp) +
+folate_fort_map <- tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
   tm_fill(col = "folate_inad_fort", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -618,11 +644,13 @@ folate_fort_map <- tm_shape(nss_region_inad_sp) +
   tm_shape(ind_state) +
   tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F)
   
 
-folate_fort_map_wfp <- tm_shape(nss_region_inad_sp) +
+folate_fort_map_wfp <- tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
   tm_fill(col = "folate_inad_fort_wfp", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -637,15 +665,44 @@ folate_fort_map_wfp <- tm_shape(nss_region_inad_sp) +
   tm_shape(ind_state) +
   tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F)
   
+mimi_ind <- ind_state %>% 
+  mutate(index = case_when(
+    State_Name == "Chhattishgarh" ~ 2,
+    State_Name == "Bihar" ~ 2,
+  State_Name == "Uttar Pradesh" ~2,
+  State_Name== "Himachal Pradesh"~ 1,
+  State_Name == "Punjab"~1,
+  State_Name == "Haryana"~1,
+  State_Name == "Delhi"~1,
+  State_Name =="Rajasthan"~1,
+  State_Name ==  "West Bengal"~1,
+  State_Name == "Jharkhand"~1,
+  State_Name == "Odisha"~1,
+  State_Name ==  "Madhya Pradesh"~1,
+  State_Name ==   "Andhra Pradesh"~1,
+  State_Name ==  "Puducherry"~1,
+  State_Name ==  "Telengana"~1,
+  .default = 0
+  )) %>% 
+  mutate(State_Name = ifelse(State_Name== "Chhattishgarh", "Chhattisgarh", State_Name))
+
+tm_shape(mimi_ind) +
+  tm_fill("index")+
+  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
+  # tm_fill(col = "state") +
+  tm_borders(col = "black", lwd = 1.5)+
+  tm_legend(show = F)
 
 
 
 #vb12
 
-vitb12_map <- tm_shape(nss_region_inad_sp) +
+vitb12_map <- tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
   tm_fill(col = "vitb12_inad", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -660,11 +717,14 @@ vitb12_map <- tm_shape(nss_region_inad_sp) +
   tm_shape(ind_state) +
   tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F)
 
 
-vitb12_fort_map <- tm_shape(nss_region_inad_sp) +
+vitb12_fort_map <- 
+  tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
   tm_fill(col = "vitb12_inad_fort", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -679,10 +739,13 @@ vitb12_fort_map <- tm_shape(nss_region_inad_sp) +
   tm_shape(ind_state) +
   tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F)
 
-vitb12_fort_map_wfp <- tm_shape(nss_region_inad_sp) +
+vitb12_fort_map_wfp <- 
+  tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
   tm_fill(col = "vitb12_inad_fort_wfp", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -697,11 +760,15 @@ vitb12_fort_map_wfp <- tm_shape(nss_region_inad_sp) +
   tm_shape(ind_state) +
   tm_text("State_Name", size = 0.8,remove.overlap = T)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F)
 
+
+
 #iron
-iron_map <- tm_shape(nss_region_inad_sp) +
+iron_map <- tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
   tm_fill(col = "fe_inad", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -716,11 +783,13 @@ iron_map <- tm_shape(nss_region_inad_sp) +
   tm_shape(ind_state) +
   tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F)
 
 
-iron_fort_map <- tm_shape(nss_region_inad_sp) +
+iron_fort_map <- tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
   tm_fill(col = "fe_inad_fort", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -735,10 +804,11 @@ iron_fort_map <- tm_shape(nss_region_inad_sp) +
   tm_shape(ind_state) +
   tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F)
 
-iron_fort_map_wfp <- tm_shape(nss_region_inad_sp) +
+iron_fort_map_wfp <-
+  tm_shape(nss_region_inad_sp) +
   tm_fill(col = "fe_inad_fort_wfp", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -751,14 +821,16 @@ iron_fort_map_wfp <- tm_shape(nss_region_inad_sp) +
   ) +
   # tm_borders(col = "black", lwd = 0.2) +
   tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
+  tm_text("State_Name", size = 0.6, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 2.2)+
   tm_legend(show = F)
 
 
 # thiamin
-thia_map <- tm_shape(nss_region_inad_sp) +
+thia_map <-tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
   tm_fill(col = "thia_inad", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -773,11 +845,13 @@ thia_map <- tm_shape(nss_region_inad_sp) +
   tm_shape(ind_state) +
   tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F)
 
 
-thia_fort_map <- tm_shape(nss_region_inad_sp) +
+thia_fort_map <- 
+  tm_shape(ind_state) +
+  tm_fill(col = "grey77") +tm_shape(nss_region_inad_sp) +
   tm_fill(col = "thia_inad_fort", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -792,11 +866,14 @@ thia_fort_map <- tm_shape(nss_region_inad_sp) +
   tm_shape(ind_state) +
   tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F) 
   
 
-thia_fort_map_wfp <- tm_shape(nss_region_inad_sp) +
+thia_fort_map_wfp <-
+  tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
   tm_fill(col = "thia_inad_fort_wfp", style = "cont", breaks = seq(0,100,by=10),
           palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Prevalence of inadequacy" ,
@@ -811,7 +888,7 @@ thia_fort_map_wfp <- tm_shape(nss_region_inad_sp) +
   tm_shape(ind_state) +
   tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F) 
 
 
@@ -913,8 +990,8 @@ tm_shape(ind_state) +
             legend.outside.size = 0.35
   ) +
   # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
+  tm_shape() +
+  tm_text("State_Name", siind_stateze = 0.8, remove.overlap = TRUE)+
   # tm_fill(col = "state") +
   tm_borders(col = "black", lwd = 2)+
   tm_legend(show = F)
@@ -1149,3 +1226,72 @@ ggplot()+
   labs(
     title = "Folate"
   )
+
+
+
+################################################################################
+
+# stacked bar chart of consumption patterns of rice
+level05_30day %>% 
+  filter(Item_Code %in% c(102,101,61)) %>% 
+  mutate(rice_type = case_when(
+    Item_Code == 101 ~ "PDS purchased",
+    Item_Code == 61 ~ "Free",
+    Item_Code == 102 ~ "Other sources"
+  )) %>% 
+  left_join(level01 %>% 
+              select(common_id, state,sector, multiplier )) %>% 
+  group_by(common_id, state, sector, multiplier) %>% 
+  pivot_wider(names_from = rice_type, values_from = Total_Consumption_Quantity) %>% 
+  select(common_id, state, `PDS purchased`, `Other sources`, Free, sector, multiplier) %>% 
+  summarise(
+    across(everything(),
+    ~sum(.,na.rm = T)
+  )) %>% 
+  ungroup() %>% 
+  mutate(multiplier = as.numeric(multiplier)) %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  group_by(state) %>% 
+  summarise(across(-c(common_id,sector,multiplier),
+                   ~survey_mean(.))) %>% 
+  pivot_longer(cols = c(2,4,6)) %>% 
+
+  mutate(state = factor(case_when(
+    state == "02" ~ "Himachal Pradesh",
+    state == "03" ~ "Punjab",
+    state == "06" ~ "Haryana",
+    state == "07" ~ "Delhi",
+    state == "08" ~ "Rajasthan",
+    state == "09" ~ "Uttar Pradesh",
+    state == "10" ~ "Bihar",
+    state == "19" ~ "West Bengal",
+    state == "20" ~ "Jharkhand",
+    state == "21" ~ "Odisha",
+    state == "22" ~ "Chhattisgarh",
+    state == "23" ~ "Madhya Pradesh",
+    state == "28" ~  "Andhra Pradesh",
+    state == "34" ~ "Puducherry",
+    state == "36" ~ "Telangana"
+  ), levels = c("Delhi","Haryana","Himachal Pradesh","Punjab","Rajasthan",# Northern
+                "Chhattisgarh", "Madhya Pradesh", "Uttar Pradesh",
+                "Bihar","Jharkhand","Odisha","West Bengal",#eastern
+                              "Andhra Pradesh", "Puducherry","Telangana"))#south
+  ) %>% 
+  ggplot(aes(fill = factor(name, levels = c("Other sources","PDS purchased","Free")), 
+             y = value, 
+             
+             x = state
+                                          
+             
+             ))+
+  geom_bar(position = "stack", stat = "identity")+
+  scale_fill_manual(values =my_colors, )+
+  theme_ipsum()+theme(axis.text.x=element_text(angle = -90, hjust = 0))+
+  labs(fill = "Source of rice consumed",
+       y = "Consumption of rice (g/d/afe)")
+  
+
+my_colors <- c( "#90E0EF","#f0bd7e", "#ec8013")
+
+
+
