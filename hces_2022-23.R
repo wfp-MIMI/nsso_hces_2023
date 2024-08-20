@@ -1,5 +1,5 @@
 #########################################
-#                            #
+#      HCES 2022-23 INDIA               #
 #########################################
 
 
@@ -31,6 +31,9 @@ ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Progra
 ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
 plot(ind_state$geometry)
 
+
+
+
 # AFE CALCUTATION ##############################################################
 
 # filter only 6 states
@@ -43,7 +46,7 @@ level02 <- data_list$level02 %>%
 summary(factor(data_list$level01$sector))#1 = rural, 2 = urban
 summary(factor(level02$gender))
 
-
+# find households with under 2 years olds (assumed women to be lactating)
 children_under_2 <- level02 %>% 
   dplyr::group_by(common_id) %>% 
   dplyr::summarise(
@@ -57,6 +60,7 @@ children_under_2 <- level02 %>%
 
 summary(children_under_2)
 
+# constant from NIN requirements
 adult_female_requirement <- 2130
 
 
@@ -77,10 +81,10 @@ level02 <- level02 %>%
         age_years < 16 ~ ifelse(gender == "1", 2860, ifelse(gender == "2",2400, 2630)),
         age_years < 18 ~ ifelse(gender == "1", 3320, ifelse(gender == "2",2500, 3322)),
         age_years >= 18 ~ ifelse(gender == "1", 2710,
-                           ifelse(age_years<50, 2130,
-                                  ifelse(under_2 == 0, 
-                                         2130,
-                                         ifelse(gender == "2", 2690, 2420))))
+                                 ifelse(age_years<50, 2130,
+                                        ifelse(under_2 == 0, 
+                                               2130,
+                                               ifelse(gender == "2", 2690, 2420))))
       ) 
   ) %>% 
   dplyr::mutate(
@@ -107,7 +111,7 @@ hh_afe %>%
 # FOOD CONSUMPTION #############################################################
 
 level05 <- data_list$level05 %>% 
-       filter(common_id %in% level01$common_id)
+  filter(common_id %in% level01$common_id)
 
 
 # level 5 is 30 day recall  all reported in kg
@@ -118,8 +122,8 @@ level05_30day <-
   filter((Item_Code >100 & Item_Code<160) | 
            (Item_Code>169 &Item_Code<180) | 
            Item_Code %in% c(
-    073,074,071,072,061,062,070,001,002,55,56,57,58,59,60,63,64,65,66,67,68
-  )) %>% 
+             073,074,071,072,061,062,070,001,002,55,56,57,58,59,60,63,64,65,66,67,68
+           )) %>% 
   left_join(ind_202223_fct %>% select(item_code, edible_portion), by = c("Item_Code" = "item_code")) %>% 
   mutate(Total_Consumption_Quantity = (as.numeric(Total_Consumption_Quantity)/30)*1000*edible_portion) %>% 
   select(-edible_portion) %>% 
@@ -127,12 +131,11 @@ level05_30day <-
   mutate(Total_Consumption_Quantity = Total_Consumption_Quantity/afe) %>% 
   group_by(Item_Code) %>% 
   mutate(Total_Consumption_Quantity = ifelse(Total_Consumption_Quantity>mean(Total_Consumption_Quantity)+
-                                                                               3*sd(Total_Consumption_Quantity),
-                                                                             median(Total_Consumption_Quantity),
+                                               3*sd(Total_Consumption_Quantity),
+                                             median(Total_Consumption_Quantity),
                                              Total_Consumption_Quantity
-                                                                             )
-         )
-
+  )
+  )
 
 
 # 7 day recall 
@@ -157,13 +160,8 @@ level05_7day <- level05 %>%
                                              Total_Consumption_Quantity
   )
   )
-  # set all 
 
 
-
-
-
-  
 
 # read in the fct
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
@@ -174,6 +172,8 @@ x <- level05_30day %>%
 
 y = level05_30day %>% 
   filter(common_id == "HCES2022653801030311623025 203121  315")
+
+rm(x,y)
 
 ################################################################################
 
@@ -204,7 +204,7 @@ hh_mn_intake <- food_consumption_daily_afe %>%
       ~sum(., na.rm = T)
     )
   )
-  
+
 # look at the energy distribution
 hh_mn_intake %>% 
   ggplot(aes(x = energy_kcal))+
@@ -216,58 +216,15 @@ summary(hh_mn_intake$energy_kcal)
 # join to hh state information
 
 
+nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
 
 
-
-
-# 
-#   
-# new_shapefile <- st_read("C:/Users/gabriel.battcock/Downloads/india_adm2_shp/DISTRICT_BOUNDARY.shp")
-# # 
-# # ind_sahpefile_names <- new_shapefile %>% 
-# #   select(District, STATE,State_LGD, DISTRICT_L) %>% 
-# #   st_drop_geometry() %>% 
-# #   filter(State_LGD == 07)
-# # 
-# # delhi <- new_shapefile%>% 
-# #   select(District, STATE,State_LGD, DISTRICT_L) %>% 
-# #   filter(State_LGD == 07)
-# # plot(delhi$geometry)
-# 
-# nss2223_shp_dictionary <- read.csv("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_new_shapefile.csv")
-# 
-# nss_region_shapefile <-   level01 %>% 
-#   distinct(state,nss_region,district) %>% 
-#   mutate(district = as.numeric(paste0(state, district)),
-#          state = as.numeric(state),
-#          nss_region = as.numeric(nss_region)) %>% 
-#   left_join(nss2223_shp_dictionary, by=c("district" = "adm2_code")) %>% 
-#   mutate(DISTRICT_L = as.character(DISTRICT_L)) %>% 
-#   select(state,nss_region,district,State_LGD, DISTRICT_L) %>% 
-#   left_join(new_shapefile , by= c("State_LGD", "DISTRICT_L")) %>% 
-#   group_by(nss_region) %>%
-#   summarise(geometry = sf::st_union(geometry))
-# 
-# plot(nss_region_shapefile$geometry,col = "red")
-#   
-# # sf::st_write(nss_region_shapefile, "C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
-#   
-# state <- new_shapefile %>% 
-#   group_by(State_LGD) %>% 
-#   mutate(geometry = sf::st_union(geometry)) %>% 
-#   ungroup() 
-#   
-# 
-# plot(state$geometry, col = 'red')
-# 
-# # write.csv(x, "C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_new_nss_shapefile.csv")
 
 
 ################################################################################
 # BASE CASE
 source(here::here("../MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"))
 
-  
 ################################################################################
 # fortification
 
@@ -317,16 +274,16 @@ nin_ear <- data.frame(
 ind_fort_spec <- 
   data.frame(
     # items all per 100g
-    Item_Code = c(101,61),
-    vita_rae_mcg_fort = c(62.5,62.5),
-    thia_mg_fort = c(0.125,0.125),
-    ribo_mg_fort = c(0.15,0.15),
-    niac_mg_fort = c(1.575,1.575),
-    vitb6_mg_fort = c(0.2,0.2),
-    folate_mcg_fort = c(10,10),
-    vitb12_mcg_fort = c(0.1,0.1),
-    fe_mg_fort = c(3.525,3.525),
-    zn_mg_fort = c(1.25,1.25),
+    Item_Code = c(101,61,107,62),
+    vita_rae_mcg_fort = c(62.5,62.5,62.5,62.5),
+    thia_mg_fort = c(0.125,0.125,0.125,0.125),
+    ribo_mg_fort = c(0.15,0.15,0.15,0.15),
+    niac_mg_fort = c(1.575,1.575,1.575,1.575),
+    vitb6_mg_fort = c(0.2,0.2,0.2,0.2),
+    folate_mcg_fort = c(10,10,10,10),
+    vitb12_mcg_fort = c(0.1,0.1,0.1,0.1),
+    fe_mg_fort = c(3.525,3.525,3.525,3.525),
+    zn_mg_fort = c(1.25,1.25,1.25,1.25),
     
     vita_rae_mcg_fort_wfp = c(150,150),
     thia_mg_fort_wfp = c(0.5,0.5),
@@ -343,27 +300,23 @@ ind_fort_spec <-
 
 
 # add contributions to fortified pds rice
-  
+
 rice_contributions <- level05_30day %>% 
+  select(
+    common_id,Item_Code,Total_Consumption_Quantity) %>% 
   #filter only pds rice and free rice and other sources
   filter(Item_Code %in% c(061,101)) %>% 
   left_join(ind_fort_spec, by = "Item_Code") %>% 
   mutate(
-    folate_ug_fort = (Total_Consumption_Quantity/100)*folate_mcg_fort,
-    iron_mg_fort = (Total_Consumption_Quantity/100)*fe_mg_fort,
-    thia_mg_fort = (Total_Consumption_Quantity/100)*thia_mg_fort,
-    vitb12_mcg_fort = (Total_Consumption_Quantity/100)*vitb12_mcg_fort,
-    
-    folate_ug_fort_wfp = (Total_Consumption_Quantity/100)*folate_mcg_fort_wfp,
-    iron_mg_fort_wfp = (Total_Consumption_Quantity/100)*fe_mg_fort_wfp,
-    thia_mg_fort_wfp = (Total_Consumption_Quantity/100)*thia_mg_fort_wfp,
-    vitb12_mcg_fort_wfp = (Total_Consumption_Quantity/100)*vitb12_mcg_fort_wfp,
-    
-  ) %>% 
-  select(
-    common_id,Item_Code,Total_Consumption_Quantity, folate_ug_fort,iron_mg_fort,thia_mg_fort, vitb12_mcg_fort,
-    folate_ug_fort_wfp,iron_mg_fort_wfp,thia_mg_fort_wfp,vitb12_mcg_fort_wfp
-  ) %>% 
+    across(
+      ends_with("_fort"),
+      ~.x*(Total_Consumption_Quantity/100)
+    ),
+    across(
+      ends_with("_wfp"),
+      ~.x*(Total_Consumption_Quantity/100)
+    )
+    ) %>% 
   group_by(common_id) %>% 
   summarise(
     across(-c(Item_Code, Total_Consumption_Quantity),
@@ -371,201 +324,94 @@ rice_contributions <- level05_30day %>%
   )
 
 
-# add butions from rice
+# add contributions from rice
 hh_mn_intake_fort <- hh_mn_intake%>% 
   left_join(rice_contributions, by= 'common_id') %>% 
   mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
-  mutate(folate_ug_fort = folate_ug+folate_ug_fort,
-         iron_mg_fort = iron_mg+iron_mg_fort,
+
+  mutate(folate_mcg_fort  = folate_ug+folate_mcg_fort ,
+         fe_mg_fort = iron_mg+fe_mg_fort,
          thia_mg_fort = vitb1_mg+thia_mg_fort,
          vitb12_mcg_fort = vitaminb12_in_mcg+vitb12_mcg_fort,
          
-         folate_ug_fort_wfp = folate_ug+folate_ug_fort_wfp,
-         iron_mg_fort_wfp = iron_mg+iron_mg_fort_wfp,
+         ## TODO complete for other micronutrients!!!
+         
+         folate_mcg_fort_wfp = folate_ug+folate_mcg_fort_wfp,
+         fe_mg_fort_wfp = iron_mg+fe_mg_fort_wfp,
          thia_mg_fort_wfp = vitb1_mg+thia_mg_fort_wfp,
          vitb12_mcg_fort_wfp = vitaminb12_in_mcg+vitb12_mcg_fort_wfp)
 
 
-# tolerable UL
-wfp_ul <- hh_mn_intake_fort %>% 
-  ggplot(aes(x = iron_mg_fort_wfp))+
-  geom_histogram()+
-  geom_vline(aes(xintercept = 45), color = 'red')+
-  geom_text(x = 53, y = 15000, label = "Tolerable upper limit")+
-  # xlim(0,75)+
-  theme_bw()+
-  xlab("Iron intake (mg)") + 
-  labs(title = "Iron intake",
-       subtitle  = "(fortified to internationally recommended standards)",
-       caption = "0.1% of households above UL")
 
-wfp_ul <- hh_mn_intake_fort %>% 
-  ggplot(aes(x = iron_mg))+
-  geom_histogram()+
-  geom_vline(aes(xintercept = 45), color = 'red')+
-  geom_text(x = 53, y = 15000, label = "Tolerable upper limit")+
-  # xlim(0,75)+
-  theme_bw()+
-  xlab("Iron intake (mg)") + 
-  labs(title = "Iron intake",
-       subtitle  = "(fortified to internationally recommended standards)"
-       )
-
-hh_mn_intake_fort %>% 
-  summarise(sum(iron_mg_fort_wfp>45)/n(),
-            sum(iron_mg_fort>45)/n(),
-            sum(iron_mg>45)/n())
-
-ind_ul <- hh_mn_intake_fort %>% 
-  ggplot(aes(x = iron_mg_fort))+
-  geom_histogram()+
-  geom_vline(aes(xintercept = 45), color = 'red')+
-  geom_text(x = 53, y = 15000, label = "Tolerable upper limit")+
-  # xlim(0,)+
-  theme_bw()+
-  xlab("Iron intake (mg)") + 
-  labs(title = "Iron intake",
-       subtitle  = "(fortified to current Indian standards)",
-       caption = "0.09% of households above UL")
+## TO DO ##
+## add in wheat flour
 
 
+# create prevalences at regional level
 
+aggregated_inadequacy <- function(group){
+  # print({{group}})
   
+  hh_mn_intake_fort %>%
+    mutate(
+      folate_inad = ifelse(folate_ug  < 180, 1,0),
+      vitb12_inad = ifelse(vitaminb12_in_mcg< 2, 1,0),
+      thia_inad = ifelse(vitb1_mg<0.9, 1,0),
+
+      folate_inad_fort = ifelse(folate_mcg_fort < 180, 1,0),
+      vitb12_inad_fort = ifelse(vitb12_mcg_fort<2,1,0),
+      thia_inad_fort = ifelse(thia_mg_fort<0.9, 1,0),
+
+      folate_inad_fort_wfp = ifelse(folate_mcg_fort_wfp < 180, 1,0),
+      vitb12_inad_fort_wfp = ifelse(vitb12_mcg_fort_wfp<2,1,0),
+      thia_inad_fort_wfp = ifelse(thia_mg_fort_wfp<0.9, 1,0),
+
+      #mar
+      fol_nar = ifelse(folate_ug < 180, folate_ug/180,1),
+      vb12_nar = ifelse(vitaminb12_in_mcg < 2, vitaminb12_in_mcg/2,1),
+      iron_nar = ifelse(iron_mg < 15, folate_ug/15,1),
+    ) %>%
+    left_join(level01 %>%
+                mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>%
+    as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>%
+    srvyr::group_by({{group}}) %>%
+    summarise(
+      across(contains("inad"),~survey_mean(. == 1, proportion = T, na.rm = T)*100)
+    ) %>%
+    left_join(
+      fe_full_prob(hh_mn_intake %>%
+                     rename(ai_afe = iron_mg) %>%
+                     left_join(level01, by="common_id"), group1 = {{group}}, bio_avail = 10) %>%
+        rename(nss_region = subpopulation,
+               fe_inad = prev_inad)
   
-nss_region_inad %>% 
-  left_join(level01, by= "common_id") %>% 
-  filter(state == "22") %>% 
-    summarise(folate = sum(folate_inad)/n(),
-              folate_fort = sum(folate_inad_fort)/n(),
-              thia = mean(vitb1_mg ),
-              thia_fort = mean(thia_mg_fort))
+    ) %>%
+    left_join(
+      fe_full_prob(hh_mn_intake_fort %>%
+                     rename(ai_afe = fe_mg_fort) %>%
+                     left_join(level01, by="common_id"), group1 = {{group}}, bio_avail = 10) %>%
+        rename(nss_region = subpopulation,
+               fe_inad_fort = prev_inad)
+    ) %>%
+    left_join(
+      fe_full_prob(hh_mn_intake_fort %>%
+                     rename(ai_afe = fe_mg_fort_wfp) %>%
+                     left_join(level01, by="common_id"), group1 = {{group}}, bio_avail = 10) %>%
+        rename(nss_region = subpopulation,
+               fe_inad_fort_wfp = prev_inad)
+    )
+}
 
 
-# create prevalences for f
+# nss_region inadequacy
+nss_region_inad <- aggregated_inadequacy(`nss_region`)
 
-nss_region_inad <- hh_mn_intake_fort %>% 
-  mutate(
-    folate_inad = ifelse(folate_ug < 180, 1,0),
-    vitb12_inad = ifelse(vitaminb12_in_mcg< 2, 1,0),
-    thia_inad = ifelse(vitb1_mg<0.9, 1,0),
-    
-    folate_inad_fort = ifelse(folate_ug_fort < 180, 1,0),
-    vitb12_inad_fort = ifelse(vitb12_mcg_fort<2,1,0),
-    thia_inad_fort = ifelse(thia_mg_fort<0.9, 1,0),
-    
-    folate_inad_fort_wfp = ifelse(folate_ug_fort_wfp < 180, 1,0),
-    vitb12_inad_fort_wfp = ifelse(vitb12_mcg_fort_wfp<2,1,0),
-    thia_inad_fort_wfp = ifelse(thia_mg_fort_wfp<0.9, 1,0),
-    
-    #mar
-    fol_nar = ifelse(folate_ug < 180, folate_ug/180,1),
-    vb12_nar = ifelse(vitaminb12_in_mcg < 2, vitaminb12_in_mcg/2,1),
-    iron_nar = ifelse(iron_mg < 15, folate_ug/15,1),
-  ) %>% 
-  left_join(level01 %>% 
-              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
-  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
-  srvyr::group_by(nss_region) %>% 
-  summarise(
-    folate_inad = srvyr::survey_mean(folate_inad == 1, proportion=TRUE,na.rm = T)*100,
-    vitb12_inad = srvyr::survey_mean(vitb12_inad == 1, proportion=TRUE,na.rm = T)*100,
-    thia_inad = srvyr::survey_mean(thia_inad == 1, proportion=TRUE,na.rm = T)*100,
-    
-    folate_inad_fort = srvyr::survey_mean(folate_inad_fort == 1, proportion=TRUE, na.rm = T)*100,
-    vitb12_inad_fort = srvyr::survey_mean(vitb12_inad_fort == 1, proportion=TRUE,na.rm = T)*100,
-    thia_inad_fort = srvyr::survey_mean(thia_inad_fort == 1, proportion=TRUE,na.rm = T)*100,
-    
-    folate_inad_fort_wfp = srvyr::survey_mean(folate_inad_fort_wfp == 1, proportion=TRUE, na.rm = T)*100,
-    vitb12_inad_fort_wfp = srvyr::survey_mean(vitb12_inad_fort_wfp == 1, proportion=TRUE,na.rm = T)*100,
-    thia_inad_fort_wfp = srvyr::survey_mean(thia_inad_fort_wfp == 1, proportion=TRUE,na.rm = T)*100
-  ) %>% 
-  left_join(
-    fe_full_prob(hh_mn_intake %>% 
-                   rename(ai_afe = iron_mg) %>% 
-                   left_join(level01, by="common_id"), group1 = nss_region, bio_avail = 10) %>% 
-      rename(nss_region = subpopulation,
-             fe_inad = prev_inad),
-    by = 'nss_region'
-  ) %>% 
-  left_join(
-    fe_full_prob(hh_mn_intake_fort %>% 
-                   rename(ai_afe = iron_mg_fort) %>% 
-                   left_join(level01, by="common_id"), group1 = nss_region, bio_avail = 10) %>% 
-      rename(nss_region = subpopulation,
-             fe_inad_fort = prev_inad),
-    by = 'nss_region'
-  ) %>% 
-  left_join(
-    fe_full_prob(hh_mn_intake_fort %>% 
-                   rename(ai_afe = iron_mg_fort_wfp) %>% 
-                   left_join(level01, by="common_id"), group1 = nss_region, bio_avail = 10) %>% 
-      rename(nss_region = subpopulation,
-             fe_inad_fort_wfp = prev_inad),
-    by = 'nss_region'
-  )
 
 # state differences
-state_inad <- hh_mn_intake_fort %>% 
-  mutate(
-    folate_inad = ifelse(folate_ug < 180, 1,0),
-    vitb12_inad = ifelse(vitaminb12_in_mcg< 2, 1,0),
-    thia_inad = ifelse(vitb1_mg<0.9, 1,0),
-    
-    folate_inad_fort = ifelse(folate_ug_fort < 180, 1,0),
-    vitb12_inad_fort = ifelse(vitb12_mcg_fort<2,1,0),
-    thia_inad_fort = ifelse(thia_mg_fort<0.9, 1,0),
-    
-    folate_inad_fort_wfp = ifelse(folate_ug_fort_wfp < 180, 1,0),
-    vitb12_inad_fort_wfp = ifelse(vitb12_mcg_fort_wfp<2,1,0),
-    thia_inad_fort_wfp = ifelse(thia_mg_fort_wfp<0.9, 1,0),
-    
-    #mar
-    fol_nar = ifelse(folate_ug < 180, folate_ug/180,1),
-    vb12_nar = ifelse(vitaminb12_in_mcg < 2, vitaminb12_in_mcg/2,1),
-    iron_nar = ifelse(iron_mg < 15, folate_ug/15,1),
-  ) %>% 
-  left_join(level01 %>% 
-              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
-  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
-  srvyr::group_by(state) %>% 
-  summarise(
-    folate_inad = srvyr::survey_mean(folate_inad == 1, proportion=TRUE,na.rm = T)*100,
-    vitb12_inad = srvyr::survey_mean(vitb12_inad == 1, proportion=TRUE,na.rm = T)*100,
-    thia_inad = srvyr::survey_mean(thia_inad == 1, proportion=TRUE,na.rm = T)*100,
-    
-    folate_inad_fort = srvyr::survey_mean(folate_inad_fort == 1, proportion=TRUE, na.rm = T)*100,
-    vitb12_inad_fort = srvyr::survey_mean(vitb12_inad_fort == 1, proportion=TRUE,na.rm = T)*100,
-    thia_inad_fort = srvyr::survey_mean(thia_inad_fort == 1, proportion=TRUE,na.rm = T)*100,
-    
-    folate_inad_fort_wfp = srvyr::survey_mean(folate_inad_fort_wfp == 1, proportion=TRUE, na.rm = T)*100,
-    vitb12_inad_fort_wfp = srvyr::survey_mean(vitb12_inad_fort_wfp == 1, proportion=TRUE,na.rm = T)*100,
-    thia_inad_fort_wfp = srvyr::survey_mean(thia_inad_fort_wfp == 1, proportion=TRUE,na.rm = T)*100
-  ) %>% 
-  left_join(
-    fe_full_prob(hh_mn_intake %>% 
-                   rename(ai_afe = iron_mg) %>% 
-                   left_join(level01, by="common_id"), group1 = state, bio_avail = 10) %>% 
-      rename(state = subpopulation,
-             fe_inad = prev_inad),
-    by = 'state'
-  ) %>% 
-  left_join(
-    fe_full_prob(hh_mn_intake_fort %>% 
-                   rename(ai_afe = iron_mg_fort) %>% 
-                   left_join(level01, by="common_id"), group1 = state, bio_avail = 10) %>% 
-      rename(state = subpopulation,
-             fe_inad_fort = prev_inad),
-    by = 'state'
-  ) %>% 
-  left_join(
-    fe_full_prob(hh_mn_intake_fort %>% 
-                   rename(ai_afe = iron_mg_fort_wfp) %>% 
-                   left_join(level01, by="common_id"), group1 = state, bio_avail = 10) %>% 
-      rename(state = subpopulation,
-             fe_inad_fort_wfp = prev_inad),
-    by = 'state'
-  )
-
+state_inad <- aggregated_inadequacy(`state`)
+  
+  
+# create an output csv
 
 state_inadequacy <- state_inad %>% 
   mutate(state = case_when(
@@ -584,7 +430,7 @@ state_inadequacy <- state_inad %>%
     state == "28" ~  "Andhra Pradesh",
     state == "34" ~ "Puducherry",
     state == "36" ~ "Telangana"
-      )) %>% 
+  )) %>% 
   select(state,
          ends_with("_inad"),
          ends_with("_fort"),
@@ -592,6 +438,10 @@ state_inadequacy <- state_inad %>%
 
 
 write.csv(state_inadequacy, "state_inadequacy.csv")
+
+
+################################################################################
+# Inadequacy Maps
 
 #create a shapefile at nss_region level
 nss_region_inad_sp <- nss_region_inad %>% 
@@ -601,20 +451,23 @@ nss_region_inad_sp <- nss_region_inad %>%
 
 
 
+# map function 
 
-# tm_shape(ind_state)+
-#   tm_borders(col = 'white')+
-
-
-folate_map <- tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-    tm_fill(col = "folate_inad", style = "cont", breaks = seq(0,100,by=10),
+inadequacy_map <- function(micronutrient,
+                           title = ""
+                           ){
+  
+  # creates a map of risk of inadequate intake for chosen mn and scenario
+  # without a legend
+  tm_shape(ind_state) +
+    tm_fill(col = "grey77") +
+    tm_shape(nss_region_inad_sp) +
+    tm_fill(col = {{micronutrient}}, style = "cont", breaks = seq(0,100,by=10),
             palette = (wesanderson::wes_palette("Zissou1Continuous")),
             title = "Prevalence of inadequacy" ,
             legend.is.portrait = FALSE
     ) +
-    tm_layout(main.title = 'Folate base' , frame = F,
+    tm_layout(main.title = {{title}} , frame = F,
               main.title.size = 0.8,
               legend.outside.position = "bottom",
               legend.outside.size = 0.35
@@ -625,67 +478,51 @@ folate_map <- tm_shape(ind_state) +
     # tm_fill(col = "state") +
     tm_borders(col = "black", lwd = 1.5)+
     tm_legend(show =F)
+}
+
+# folate
+
+folate_map <- inadequacy_map("folate_inad", "Folate base")
+folate_fort_map <-inadequacy_map("folate_inad_fort", "Folate fortified - current specs")
+folate_fort_map_wfp <- inadequacy_map("folate_inad_fort_wfp", "Folate fortified - WFP specs")
   
 
-folate_fort_map <- tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "folate_inad_fort", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Folate fortified - current specs", frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = F)
-  
+#vb12
 
-folate_fort_map_wfp <- tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "folate_inad_fort_wfp", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Folate fortified - WFP specs", frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = F)
+vitb12_map <- inadequacy_map("vitb12_inad", "Vitamin B12 base")
+vitb12_fort_map <- inadequacy_map("vitb12_inad_fort", "Vitamin B12 fortified - current specs")
+vitb12_fort_map_wfp <- inadequacy_map("vitb12_inad_fort_wfp", "Vitamin B12 fortified - WFP specs")
+ 
+#iron
+iron_map <- inadequacy_map("fe_inad", "Iron base")
+iron_fort_map <- inadequacy_map("fe_inad_fort", "Iron fortified - current specs")
+iron_fort_map_wfp <-inadequacy_map("fe_inad_fort_wfp", "Iron fortified - WFP specs")
   
+# thiamin
+thia_map <-inadequacy_map("thia_inad", "Thiamin base")
+thia_fort_map <- inadequacy_map("thia_inad_fort", "Thiamin fortified - current specs")
+thia_fort_map_wfp <- inadequacy_map("thia_inad_fort_wfp", "Thiamin fortified - WFP specs")
+ 
+
+
 mimi_ind <- ind_state %>% 
   mutate(index = case_when(
     State_Name == "Chhattishgarh" ~ 2,
     State_Name == "Bihar" ~ 2,
-  State_Name == "Uttar Pradesh" ~2,
-  State_Name== "Himachal Pradesh"~ 1,
-  State_Name == "Punjab"~1,
-  State_Name == "Haryana"~1,
-  State_Name == "Delhi"~1,
-  State_Name =="Rajasthan"~1,
-  State_Name ==  "West Bengal"~1,
-  State_Name == "Jharkhand"~1,
-  State_Name == "Odisha"~1,
-  State_Name ==  "Madhya Pradesh"~1,
-  State_Name ==   "Andhra Pradesh"~1,
-  State_Name ==  "Puducherry"~1,
-  State_Name ==  "Telengana"~1,
-  .default = 0
+    State_Name == "Uttar Pradesh" ~2,
+    State_Name== "Himachal Pradesh"~ 1,
+    State_Name == "Punjab"~1,
+    State_Name == "Haryana"~1,
+    State_Name == "Delhi"~1,
+    State_Name =="Rajasthan"~1,
+    State_Name ==  "West Bengal"~1,
+    State_Name == "Jharkhand"~1,
+    State_Name == "Odisha"~1,
+    State_Name ==  "Madhya Pradesh"~1,
+    State_Name ==   "Andhra Pradesh"~1,
+    State_Name ==  "Puducherry"~1,
+    State_Name ==  "Telengana"~1,
+    .default = 0
   )) %>% 
   mutate(State_Name = ifelse(State_Name== "Chhattishgarh", "Chhattisgarh", State_Name))
 
@@ -695,201 +532,6 @@ tm_shape(mimi_ind) +
   # tm_fill(col = "state") +
   tm_borders(col = "black", lwd = 1.5)+
   tm_legend(show = F)
-
-
-
-#vb12
-
-vitb12_map <- tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "vitb12_inad", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Vitamin B12 base", frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = F)
-
-
-vitb12_fort_map <- 
-  tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "vitb12_inad_fort", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Vitamin B12 fortified - current specs", frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = F)
-
-vitb12_fort_map_wfp <- 
-  tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "vitb12_inad_fort_wfp", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Vitamin B12 fortified - WFP specs", frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8,remove.overlap = T)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = F)
-
-
-
-#iron
-iron_map <- tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "fe_inad", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Iron base", frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = F)
-
-
-iron_fort_map <- tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "fe_inad_fort", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Iron fortified - current specs" , frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = F)
-
-iron_fort_map_wfp <-
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "fe_inad_fort_wfp", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Iron fortified - WFP pecs" , frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.6, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 2.2)+
-  tm_legend(show = F)
-
-
-# thiamin
-thia_map <-tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "thia_inad", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Thiamin base", frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = F)
-
-
-thia_fort_map <- 
-  tm_shape(ind_state) +
-  tm_fill(col = "grey77") +tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "thia_inad_fort", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Thiamin fortified - current specs", frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = F) 
-  
-
-thia_fort_map_wfp <-
-  tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = "thia_inad_fort_wfp", style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = "Thiamin fortified - WFP specs", frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  tm_text("State_Name", size = 0.8, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = F) 
 
 
 ################################################################################
@@ -904,7 +546,7 @@ reach_rice  <- level05_30day %>%
             consumed_pds= ifelse(sum(consumed_pds)==0,0,1),
             consumed_free = ifelse(sum(consumed_free)==0,0,1)) %>% 
   left_join(level01 %>% 
-            mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
+              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
   as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
   srvyr::group_by(nss_region) %>% 
   summarise(
@@ -913,7 +555,7 @@ reach_rice  <- level05_30day %>%
     consumed_free = survey_mean(consumed_free ==1, proportion = TRUE)*100
     
   )
-        
+
 
 reach_rice_state  <- level05_30day %>% 
   mutate(consumed_pds_or_free = ifelse(Item_Code %in% c(61,101),1,0),
@@ -933,13 +575,14 @@ reach_rice_state  <- level05_30day %>%
     consumed_free = survey_mean(consumed_free ==1, proportion = TRUE)*100
     
   )
+
 # pc by state
 intake_rice_state  <- level05_30day %>% 
   filter(Item_Code %in% c(101,61))%>% 
   group_by(common_id) %>% 
   mutate(free = ifelse(Item_Code == 61, Total_Consumption_Quantity, 0),
-            pds = ifelse(Item_Code == 101, Total_Consumption_Quantity, 0),
-            combind = sum(Total_Consumption_Quantity)) %>% 
+         pds = ifelse(Item_Code == 101, Total_Consumption_Quantity, 0),
+         combind = sum(Total_Consumption_Quantity)) %>% 
   summarise(free = sum(free),
             pds = sum(pds),
             combind = combind) %>% 
@@ -1046,28 +689,28 @@ hh_expenditure <-
   mutate(hh_size = as.numeric(hh_size)) %>% 
   group_by(common_id,hh_size ) %>% 
   summarise(total = sum(as.numeric(hh_usual_monthly_consumption),na.rm = T)
-            ) %>% 
+  ) %>% 
   slice(1) %>% 
-    ungroup() %>% 
-    mutate(per_capita_expenditure = total/hh_size) %>% 
-    left_join(level01, by= 'common_id') %>%
-    group_by(sector) %>% 
-    mutate(res_quintile =
-             case_when(
-               per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[2]]~
-                 "1",
-               per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[3]]~
-                 "2",
-               per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[4]]~
-                 "3",
-               per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[5]]~
-                 "4",
-               per_capita_expenditure<=quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[6]]~
-                 "5",
-             )) %>% 
-    select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile)
-    
- 
+  ungroup() %>% 
+  mutate(per_capita_expenditure = total/hh_size) %>% 
+  left_join(level01, by= 'common_id') %>%
+  group_by(sector) %>% 
+  mutate(res_quintile =
+           case_when(
+             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[2]]~
+               "1",
+             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[3]]~
+               "2",
+             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[4]]~
+               "3",
+             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[5]]~
+               "4",
+             per_capita_expenditure<=quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[6]]~
+               "5",
+           )) %>% 
+  select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile)
+
+
 
 #res
 res_quintile_db <- hh_mn_intake_fort %>% 
@@ -1107,7 +750,7 @@ res_quintile_db <- hh_mn_intake_fort %>%
     fe_full_prob(hh_mn_intake %>% 
                    rename(ai_afe = iron_mg) %>% 
                    left_join(level01, by="common_id") %>% 
-                 left_join(hh_expenditure), group1 = sector, group2 = res_quintile, bio_avail = 10) %>% 
+                   left_join(hh_expenditure), group1 = sector, group2 = res_quintile, bio_avail = 10) %>% 
       rename(res_quintile = subpopulation,
              fe_inad = prev_inad),
     by = 'res_quintile'
@@ -1130,10 +773,10 @@ res_quintile_db <- hh_mn_intake_fort %>%
              fe_inad_fort = prev_inad),
     by = 'res_quintile'
   )
-  
+
 # dumbell plots
 
-  
+
 min_max_iron <- res_quintile_db %>% 
   group_by(sector, res_quintile) %>%
   summarise(low = min(fe_inad, fe_inad_fort.x),
@@ -1161,7 +804,7 @@ res_quintile_db_iron %>%
     res_quintile == "2_4" ~ "Urban Rich",
     res_quintile == "2_5" ~ "Urban Richest"
   ), levels = c("Rural Poorest","Rural Poor","Rural Middle","Rural Rich","Rural Richest",
-            "Urban Poorest", "Urban Poor","Urban Middle","Urban Rich","Urban Richest")),
+                "Urban Poorest", "Urban Poor","Urban Middle","Urban Rich","Urban Richest")),
   scenario = ifelse(name== "fe_inad", "Base", "Current standards"),
   Residence = ifelse(sector == 1, "Rural", "Urban")
   ) %>% 
@@ -1178,7 +821,7 @@ res_quintile_db_iron %>%
   labs(
     title = "Iron"
   )
-  
+
 #
 
 
@@ -1213,8 +856,8 @@ res_quintile_db_fol %>%
   scenario = ifelse(name== "folate_inad", "Base", "Current standards"),
   Residence = ifelse(sector == 1, "Rural", "Urban")
   ) %>% 
-
-ggplot()+
+  
+  ggplot()+
   geom_pointrange(aes(x = res_quintile, y =value, ymin = low, ymax = hi, color = scenario, shape = Residence))+
   theme_bw()+
   coord_flip(ylim = c(0, 100)) + 
@@ -1246,8 +889,8 @@ level05_30day %>%
   select(common_id, state, `PDS purchased`, `Other sources`, Free, sector, multiplier) %>% 
   summarise(
     across(everything(),
-    ~sum(.,na.rm = T)
-  )) %>% 
+           ~sum(.,na.rm = T)
+    )) %>% 
   ungroup() %>% 
   mutate(multiplier = as.numeric(multiplier)) %>% 
   as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
@@ -1255,7 +898,7 @@ level05_30day %>%
   summarise(across(-c(common_id,sector,multiplier),
                    ~survey_mean(.))) %>% 
   pivot_longer(cols = c(2,4,6)) %>% 
-
+  
   mutate(state = factor(case_when(
     state == "02" ~ "Himachal Pradesh",
     state == "03" ~ "Punjab",
@@ -1275,23 +918,39 @@ level05_30day %>%
   ), levels = c("Delhi","Haryana","Himachal Pradesh","Punjab","Rajasthan",# Northern
                 "Chhattisgarh", "Madhya Pradesh", "Uttar Pradesh",
                 "Bihar","Jharkhand","Odisha","West Bengal",#eastern
-                              "Andhra Pradesh", "Puducherry","Telangana"))#south
+                "Andhra Pradesh", "Puducherry","Telangana"))#south
   ) %>% 
   ggplot(aes(fill = factor(name, levels = c("Other sources","PDS purchased","Free")), 
              y = value, 
              
              x = state
-                                          
              
-             ))+
+             
+  ))+
   geom_bar(position = "stack", stat = "identity")+
   scale_fill_manual(values =my_colors, )+
   theme_ipsum()+theme(axis.text.x=element_text(angle = -90, hjust = 0))+
   labs(fill = "Source of rice consumed",
        y = "Consumption of rice (g/d/afe)")
-  
+
 
 my_colors <- c( "#90E0EF","#f0bd7e", "#ec8013")
+
+
+# tolerable UL ######################################################
+
+
+wfp_ul <- hh_mn_intake_fort %>% 
+  ggplot(aes(x = iron_mg_fort_wfp))+
+  geom_histogram()+
+  geom_vline(aes(xintercept = 45), color = 'red')+
+  geom_text(x = 53, y = 15000, label = "Tolerable upper limit")+
+  # xlim(0,75)+
+  theme_bw()+
+  xlab("Iron intake (mg)") + 
+  labs(title = "Iron intake",
+       subtitle  = "(fortified to internationally recommended standards)",
+       caption = "0.1% of households above UL")
 
 
 
