@@ -37,8 +37,7 @@ plot(ind_state$geometry)
 # AFE CALCUTATION ##############################################################
 
 # filter only 6 states
-level01 <- data_list$level01 %>% 
-  filter(state %in% c("02", "03","06","07", "08","09", "10","19","20","21", "22","23","28","34","36"))
+level01 <- data_list$level01 
 # 
 level02 <- data_list$level02 %>% 
   filter(common_id %in% level01$common_id)
@@ -128,14 +127,8 @@ level05_30day <-
   mutate(Total_Consumption_Quantity = (as.numeric(Total_Consumption_Quantity)/30)*1000*edible_portion) %>% 
   select(-edible_portion) %>% 
   left_join(hh_afe, by = "common_id") %>% 
-  mutate(Total_Consumption_Quantity = Total_Consumption_Quantity/afe) %>% 
-  group_by(Item_Code) %>% 
-  mutate(Total_Consumption_Quantity = ifelse(Total_Consumption_Quantity>mean(Total_Consumption_Quantity)+
-                                               3*sd(Total_Consumption_Quantity),
-                                             median(Total_Consumption_Quantity),
-                                             Total_Consumption_Quantity
-  )
-  )
+  mutate(Total_Consumption_Quantity = Total_Consumption_Quantity/afe) 
+
 
 
 # 7 day recall 
@@ -152,16 +145,42 @@ level05_7day <- level05 %>%
   select(-c(item_name, conversion_factor_to_kg, edible_portion)) %>% 
   mutate(Total_Consumption_Quantity = (Total_Consumption_Quantity/7)*1000) %>% 
   left_join(hh_afe, by = "common_id") %>% 
-  mutate(Total_Consumption_Quantity = Total_Consumption_Quantity/afe) %>% 
+  mutate(Total_Consumption_Quantity = Total_Consumption_Quantity/afe) 
+
+# bind the two methods
+food_consumption_daily_afe <- 
+  bind_rows(level05_7day %>% mutate(Item_Code = as.numeric(Item_Code)),
+            level05_30day)
+
+rm(level05_7day, level05_30day, level05)
+
+# filter outliers
+food_consumption_daily_afe <- food_consumption_daily_afe %>% 
+  mutate(log_quantity_g = log(Total_Consumption_Quantity))
+
+quant_cutpoints <- food_consumption_daily_afe %>% 
   group_by(Item_Code) %>% 
-  mutate(Total_Consumption_Quantity = ifelse(Total_Consumption_Quantity>mean(Total_Consumption_Quantity)+
-                                               3*sd(Total_Consumption_Quantity),
-                                             median(Total_Consumption_Quantity),
-                                             Total_Consumption_Quantity
-  )
-  )
+  summarise(
+    mean_log = mean(log_quantity_g, na.rm = T),
+    sd_log = sd(log_quantity_g, na.rm = T)) %>% 
+  mutate(upper_cut = mean_log+2*sd_log) %>% 
+  select(Item_Code, upper_cut)
+  
+food_consumption_daily_afe <- food_consumption_daily_afe %>% 
+  left_join(quant_cutpoints, by = "Item_Code") %>% 
+  mutate(Total_Consumption_Quantity = case_when(
+    log_quantity_g>=upper_cut ~ NA_real_,
+    TRUE ~ Total_Consumption_Quantity
+  )) %>% 
+  select(-log_quantity_g,-upper_cut)
 
+food_consumption_daily_afe %>% 
+  group_by(Item_Code) %>% 
+  mutate(Total_Consumption_Quantity = ifelse(is.na(Total_Consumption_Quantity),
+                                             median(Total_Consumption_Quantity, na.rm =T),
+                                             Total_Consumption_Quantity))
 
+rm(quant_cutpoints)
 
 # read in the fct
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
@@ -177,9 +196,7 @@ rm(x,y)
 
 ################################################################################
 
-food_consumption_daily_afe <- 
-  bind_rows(level05_7day %>% mutate(Item_Code = as.numeric(Item_Code)),
-            level05_30day)
+
 
 
 unmerged <- anti_join(food_consumption_daily_afe, ind_202223_fct, by=c("Item_Code" ="item_code" )) %>% 
@@ -191,12 +208,10 @@ unmerged <- anti_join(food_consumption_daily_afe, ind_202223_fct, by=c("Item_Cod
 hh_mn_intake <- food_consumption_daily_afe %>% 
   inner_join(ind_202223_fct , by=c("Item_Code" ="item_code" )) %>% 
   mutate(quantity_100g = Total_Consumption_Quantity/100,
-         energy_kcal = energy_kcal*quantity_100g,
-         folate_ug = folate_ug*quantity_100g,
-         iron_mg = iron_mg*quantity_100g,
-         vitaminb12_in_mcg = vitaminb12_in_mcg*quantity_100g,
-         vitb1_mg  = vitb1_mg* quantity_100g) %>% 
-  select(common_id, energy_kcal,folate_ug,iron_mg,vitaminb12_in_mcg, vitb1_mg) %>% 
+         across(c(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg ),
+                ~.x*quantity_100g)
+         ) %>% 
+  select(c(common_id,energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg)) %>% 
   group_by(common_id) %>% 
   summarise(
     across(
@@ -219,15 +234,16 @@ summary(hh_mn_intake$energy_kcal)
 nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
 
 
-
-
 ################################################################################
 # BASE CASE
+
+# sorce iron full probability functions
 source(here::here("../MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"))
 
 ################################################################################
 # fortification
 
+# set ear cut point and UL values
 nin_ear <- data.frame(
   nutrient = c("energy_kcal",
                "vita_rae_mcg",
@@ -325,7 +341,7 @@ rice_contributions <- level05_30day %>%
 
 
 # add contributions from rice
-hh_mn_intake_fort <- hh_mn_intake%>% 
+hh_mn_intake_fort_rice <- hh_mn_intake%>% 
   left_join(rice_contributions, by= 'common_id') %>% 
   mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
 
@@ -333,13 +349,22 @@ hh_mn_intake_fort <- hh_mn_intake%>%
          fe_mg_fort = iron_mg+fe_mg_fort,
          thia_mg_fort = vitb1_mg+thia_mg_fort,
          vitb12_mcg_fort = vitaminb12_in_mcg+vitb12_mcg_fort,
+         niac_mg_fort = vitb3_mg + niac_mg_fort,
+         vitb6_mg_fort = vitb6_mg+ vitb6_mg_fort, 
+         vita_rae_mcg_fort = vita_mcg + vita_rae_mcg_fort,
+         zn_mg_fort = zinc_mg + zn_mg_fort,
          
-         ## TODO complete for other micronutrients!!!
+## TODO complete for other micronutrients!!!
          
          folate_mcg_fort_wfp = folate_ug+folate_mcg_fort_wfp,
          fe_mg_fort_wfp = iron_mg+fe_mg_fort_wfp,
          thia_mg_fort_wfp = vitb1_mg+thia_mg_fort_wfp,
-         vitb12_mcg_fort_wfp = vitaminb12_in_mcg+vitb12_mcg_fort_wfp)
+         vitb12_mcg_fort_wfp = vitaminb12_in_mcg+vitb12_mcg_fort_wfp,
+         niac_mg_fort_wfp = vitb3_mg + niac_mg_fort_wfp,
+         vitb6_mg_fort_wfp = vitb6_mg+ vitb6_mg_fort_wfp, 
+         vita_rae_mcg_fort_wfp = vita_mcg + vita_rae_mcg_fort_wfp,
+         zn_mg_fort_wfp = zinc_mg + zn_mg_fort_wfp
+)
 
 
 
@@ -349,12 +374,15 @@ hh_mn_intake_fort <- hh_mn_intake%>%
 
 # create prevalences at regional level
 
+calculate_inadequacy <- function(micronutrient, ear_cut){return(ifelse(micronutrient<ear_cut,1,0))}
+
 aggregated_inadequacy <- function(group){
   # print({{group}})
   
   hh_mn_intake_fort %>%
     mutate(
-      folate_inad = ifelse(folate_ug  < 180, 1,0),
+      #compare to the estimated average requirement (EAR)
+      folate_inad = ifelse(folate_ug<180,1,0),
       vitb12_inad = ifelse(vitaminb12_in_mcg< 2, 1,0),
       thia_inad = ifelse(vitb1_mg<0.9, 1,0),
 
@@ -365,16 +393,19 @@ aggregated_inadequacy <- function(group){
       folate_inad_fort_wfp = ifelse(folate_mcg_fort_wfp < 180, 1,0),
       vitb12_inad_fort_wfp = ifelse(vitb12_mcg_fort_wfp<2,1,0),
       thia_inad_fort_wfp = ifelse(thia_mg_fort_wfp<0.9, 1,0),
+      
+      
 
-      #mar
-      fol_nar = ifelse(folate_ug < 180, folate_ug/180,1),
-      vb12_nar = ifelse(vitaminb12_in_mcg < 2, vitaminb12_in_mcg/2,1),
-      iron_nar = ifelse(iron_mg < 15, folate_ug/15,1),
+      # #mar
+      # fol_nar = ifelse(folate_ug < 180, folate_ug/180,1),
+      # vb12_nar = ifelse(vitaminb12_in_mcg < 2, vitaminb12_in_mcg/2,1),
+      # iron_nar = ifelse(iron_mg < 15, folate_ug/15,1),
     ) %>%
     left_join(level01 %>%
                 mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>%
     as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>%
-    srvyr::group_by({{group}}) %>%
+    # srvyr::group_by({{group}}) %>%
+    srvyr::group_by(state) %>% 
     summarise(
       across(contains("inad"),~survey_mean(. == 1, proportion = T, na.rm = T)*100)
     ) %>%
@@ -536,6 +567,8 @@ tm_shape(mimi_ind) +
 
 ################################################################################
 # reach
+
+calculate_reach
 
 reach_rice  <- level05_30day %>% 
   mutate(consumed_pds_or_free = ifelse(Item_Code %in% c(61,101),1,0),
@@ -713,7 +746,10 @@ hh_expenditure <-
 
 
 #res
-res_quintile_db <- hh_mn_intake_fort %>% 
+res_quintile_db <- caculate
+  
+  
+  hh_mn_intake_fort %>% 
   mutate(
     folate_inad = ifelse(folate_ug < 180, 1,0),
     vitb12_inad = ifelse(vitaminb12_in_mcg< 2, 1,0),
