@@ -9,3 +9,4 @@
 *.Ruserdata
 *.RDataTmp
 .Rproj.user
+*.RDS
