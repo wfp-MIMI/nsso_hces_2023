@@ -22,7 +22,7 @@ rm(list= c("rq_packages", "installed_packages"))
 #-------------------------------------------------------------------------------
 
 file_list = list.files("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/")
-haven::read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/level06.dta")
+# haven::read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/level06.dta")
 data_list <- lapply(paste0("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/",file_list), haven::read_dta)
 names(data_list) <- tools::file_path_sans_ext(file_list)
 
@@ -281,8 +281,4 @@ saveRDS(hh_mn_intake, file = "ind_nss2223_base_case.rds")
 
 
 rm(list = ls())
-
-
-
-
 

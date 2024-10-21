@@ -26,11 +26,19 @@ rm(list= c("rq_packages", "installed_packages"))
 source(here::here("../MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"))
 
 ################################################################################
+file_list = list.files("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/")
+# haven::read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/level06.dta")
+data_list <- lapply(paste0("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/",file_list), haven::read_dta)
+names(data_list) <- tools::file_path_sans_ext(file_list)
+level01 <- data_list$level01
+
 
 food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
 hh_mn_intake <- readRDS("ind_nss2223_base_case.rds")
+hh_expenditure <- readRDS("ind_nss2223_hh_expenditure.rds")
 # read in the fct
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
+
 
 ## Constants ###################################################################
 
@@ -84,7 +92,7 @@ ind_fort_spec <-
     Item_Code = c(101,61,107,62),
     vita_rae_mcg_fort = c(62.5,62.5,62.5,62.5),
     thia_mg_fort = c(0.125,0.125,0.125,0.125),
-    ribo_mg_fort = c(0.15,0.15,0.15,0.15),
+    ribo_mg_fort = c(NA,NA,0.15,0.15),
     niac_mg_fort = c(1.575,1.575,1.575,1.575),
     vitb6_mg_fort = c(0.2,0.2,0.2,0.2),
     folate_mcg_fort = c(10,10,10,10),
@@ -232,13 +240,16 @@ wf_contributions <- food_consumption_daily_afe %>%
   mutate(
     across(
       ends_with("_fort"),
-      ~.x*(Total_Consumption_Quantity/100)
+      ~.x*(Total_Consumption_Quantity/100),
+      .names = "{.col}_wf"
     ),
     across(
       ends_with("_wfp"),
-      ~.x*(Total_Consumption_Quantity/100)
+      ~.x*(Total_Consumption_Quantity/100),
+      .names = "{.col}_wf"
     )
   ) %>% 
+  select(common_id,Item_Code, Total_Consumption_Quantity, ends_with("_wf")) %>% 
   group_by(common_id) %>% 
   summarise(
     across(-c(Item_Code, Total_Consumption_Quantity),
@@ -275,29 +286,30 @@ rm(rice_contributions)
 
 ## Wheat flour 
 
-hh_mn_intake_fort_wf <- hh_mn_intake%>% 
+hh_mn_intake_fort_wf <- hh_mn_intake_fort_rice%>% 
+  # take the fortification scenarios of rice and add on top 
   left_join(wf_contributions, by= 'common_id') %>% 
   mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
   
-  mutate(folate_mcg_fort  = folate_ug+folate_mcg_fort ,
-         fe_mg_fort = iron_mg+fe_mg_fort,
-         thia_mg_fort = vitb1_mg+thia_mg_fort,
-         vitb12_mcg_fort = vitaminb12_in_mcg+vitb12_mcg_fort,
-         niac_mg_fort = vitb3_mg + niac_mg_fort,
-         vitb6_mg_fort = vitb6_mg+ vitb6_mg_fort, 
-         vita_rae_mcg_fort = vita_mcg + vita_rae_mcg_fort,
-         zn_mg_fort = zinc_mg + zn_mg_fort,
+  mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_wf ,
+         fe_mg_fort = fe_mg_fort+fe_mg_fort_wf,
+         thia_mg_fort = thia_mg_fort+thia_mg_fort_wf,
+         vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_wf,
+         niac_mg_fort = niac_mg_fort + niac_mg_fort_wf,
+         vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_wf, 
+         vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_wf,
+         zn_mg_fort = zn_mg_fort + zn_mg_fort_wf,
          
-         ## TODO complete for other micronutrients!!!
+
          
-         folate_mcg_fort_wfp = folate_ug+folate_mcg_fort_wfp,
-         fe_mg_fort_wfp = iron_mg+fe_mg_fort_wfp,
-         thia_mg_fort_wfp = vitb1_mg+thia_mg_fort_wfp,
-         vitb12_mcg_fort_wfp = vitaminb12_in_mcg+vitb12_mcg_fort_wfp,
-         niac_mg_fort_wfp = vitb3_mg + niac_mg_fort_wfp,
-         vitb6_mg_fort_wfp = vitb6_mg+ vitb6_mg_fort_wfp, 
-         vita_rae_mcg_fort_wfp = vita_mcg + vita_rae_mcg_fort_wfp,
-         zn_mg_fort_wfp = zinc_mg + zn_mg_fort_wfp
+         folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_wf,
+         fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_wf,
+         thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_wf,
+         vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_wf,
+         niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_wf,
+         vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_wf, 
+         vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_wf,
+         zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_wf
   )
 
 rm(wf_contributions)
@@ -314,26 +326,26 @@ hh_expenditure <- hh_expenditure%>%
 # rice pds
 
 # nss_region inadequacy
-nss_region_inad <- aggregated_inadequacy(`nss_region`)
+nss_region_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`nss_region`)
 
 
 # state differences
-state_inad <- aggregated_inadequacy(`state`)
+state_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`state`)
 
 
 # sep 
 
-sep_inad <- aggregated_inadequacy(`sep_quintile`) 
+sep_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`sep_quintile`) 
 
 #sector
 
-sector_inad <- aggregated_inadequacy(`sector`) 
+sector_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`sector`) 
 
 # res quintile
-res_quin_inad <- aggregated_inadequacy(`res_quintile`)
+res_quin_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`res_quintile`)
 
 # national 
-national_inad <- aggregated_inadequacy(`national`)
+national_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`national`)
 
 
 #total inadequacy 
@@ -352,6 +364,10 @@ all_inad_rice <- national_inad %>%
 
 
 ## wheat flour 
+
+nss_region_inad_wf<- aggregated_inadequacy(hh_mn_intake_fort_wf, `nss_region`)
+
+
 national_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `national`)
 
 ##  
@@ -379,11 +395,13 @@ all_inad_wf <- national_inad_wf %>%
 
 
 # summary csvs
-write.csv(all_inad_wf,"india_wf_inad.csv" )
-write.csv(all_inad_rice,"india_rice_inad.csv" )
+# write.csv(all_inad_wf,"india_wf_inad.csv" )
+# write.csv(all_inad_rice,"india_rice_inad.csv" )
 
 # r data for further analysis
 saveRDS(hh_mn_intake_fort_wf, "ind_fort_wf.rds")
 saveRDS(hh_mn_intake_fort_rice, "ind_fort_rice.rds")
+saveRDS(nss_region_inad, "nss_region_inad_rice.rds" )
+saveRDS(nss_region_inad_wf, "nss_region_inad_rice.rds" )
 
 rm(list = ls())

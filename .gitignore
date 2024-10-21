@@ -10,3 +10,4 @@
 *.RDataTmp
 .Rproj.user
 *.RDS
+*.svg
