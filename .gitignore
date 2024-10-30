@@ -9,3 +9,5 @@
 *.Ruserdata
 *.RDataTmp
 .Rproj.user
+*.RDS
+*.svg
