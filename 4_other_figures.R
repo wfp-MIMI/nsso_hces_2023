@@ -1,4 +1,84 @@
 
+#########################################
+#      HCES 2022-23 INDIA               #
+#          more figures              #
+#########################################
+
+
+# Author: Gabriel Battcock
+# Created: 
+# Last updated: 22 Oct 2024
+
+## Load packages ###############################################################
+
+rq_packages <- c("tidyverse","dplyr","readr","srvyr","ggplot2", "tidyr",
+                 "ggridges", "gt", "haven","foreign",
+                 "tmap","sf","rmapshaper","readxl","hrbrthemes",
+                 "wesanderson","treemap","treemapify")
+
+installed_packages <- rq_packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(rq_packages[!installed_packages])
+}
+lapply(rq_packages, require, character.only = T)
+rm(list= c("rq_packages", "installed_packages"))
+
+
+# sorce iron full probability functions
+
+source(here::here("../MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"))
+
+## Load data ###################################################################
+
+# rm(list = ls())
+
+# set paths
+figure_path <- "figures/"
+raw_path <- "data/raw/"
+processed_path <- "data/processed/"
+
+###
+
+food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
+hh_mn_intake <- readRDS("ind_nss2223_base_case.rds")
+# read in the fct
+ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
+
+
+ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
+# ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
+nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
+
+nss_region_inad_rice <- readRDS("nss_region_inad_rice.rds" )
+nss_region_inad_wf <- readRDS("nss_region_inad_rice.rds" )
+food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
+
+ind_nss_hdds <- read_xlsx(paste0(raw_path, "ind_nss2223_hdds.xlsx"),sheet = 1)
+
+
+## Functions ###################################################################
+
+
+
+
+
+
+x <- data_list$level05%>% 
+  filter(common_id =="HCES2022655561010131113011 101202  201")
+
+
+level01 %>% 
+  summarise(
+   n =  n(),
+    
+  )
+state_number <- level01 %>% 
+  group_by(state) %>% 
+  summarise(n(),
+            (n()/261746)*100)
+
+
+
 
 ######## sep quintile
 
@@ -27,75 +107,168 @@ hh_expenditure <-
              per_capita_expenditure<=quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[6]]~
                "5",
            )) %>% 
-  select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile)
+  select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile) %>% 
+  left_join(level01 %>% select(common_id, state,multiplier ) %>% mutate(multiplier = as.numeric(multiplier)), by= 'common_id')
 
 
 
-#res
-res_quintile_db <- caculate
+### proportion plots
 
+food_group_cols <- colnames(ind_nss_hdds %>% select(-c(item_code,item_name)))
 
-hh_mn_intake_fort %>% 
-  mutate(
-    folate_inad = ifelse(folate_ug < 180, 1,0),
-    vitb12_inad = ifelse(vitaminb12_in_mcg< 2, 1,0),
-    thia_inad = ifelse(vitb1_mg<0.9, 1,0),
-    
-    folate_inad_fort = ifelse(folate_ug_fort < 180, 1,0),
-    vitb12_inad_fort = ifelse(vitb12_mcg_fort<2,1,0),
-    thia_inad_fort = ifelse(thia_mg_fort<0.9, 1,0),
-    
-    folate_inad_fort_wfp = ifelse(folate_ug_fort_wfp < 180, 1,0),
-    vitb12_inad_fort_wfp = ifelse(vitb12_mcg_fort_wfp<2,1,0),
-    thia_inad_fort_wfp = ifelse(thia_mg_fort_wfp<0.9, 1,0),
+ind_nss_hdds<- ind_nss_hdds %>% 
+  pivot_longer(cols = -c(item_code,item_name)) %>% 
+  filter(value == 1) %>% 
+  select(-value) %>% 
+  rename(food_group = name, 
+         Item_Code = item_code)
+
+# data clean
+food_group_full <- food_consumption_daily_afe %>% 
+  inner_join(ind_202223_fct , by=c("Item_Code" ="item_code" )) %>% 
+  mutate(quantity_100g = Total_Consumption_Quantity/100,
+         across(c(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg ),
+                ~.x*quantity_100g)
   ) %>% 
-  left_join(level01 %>% 
-              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
-  left_join(hh_expenditure ) %>% 
-  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
-  srvyr::group_by(sector, res_quintile) %>% 
+  select(c(common_id,Item_Code,item_name, energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg))  %>% 
+  left_join(hh_expenditure) %>% 
+  left_join(ind_nss_hdds) 
+
+
+## 
+## summarise micronutrient contributions from food groups nationally
+national_foodgroup_average <- food_group_full %>% 
+  group_by(common_id,state, food_group) %>% 
   summarise(
-    folate_inad = srvyr::survey_mean(folate_inad == 1, proportion=TRUE,na.rm = T)*100,
-    vitb12_inad = srvyr::survey_mean(vitb12_inad == 1, proportion=TRUE,na.rm = T)*100,
-    thia_inad = srvyr::survey_mean(thia_inad == 1, proportion=TRUE,na.rm = T)*100,
-    
-    folate_inad_fort = srvyr::survey_mean(folate_inad_fort == 1, proportion=TRUE, na.rm = T)*100,
-    vitb12_inad_fort = srvyr::survey_mean(vitb12_inad_fort == 1, proportion=TRUE,na.rm = T)*100,
-    thia_inad_fort = srvyr::survey_mean(thia_inad_fort == 1, proportion=TRUE,na.rm = T)*100,
-    
-    folate_inad_fort_wfp = srvyr::survey_mean(folate_inad_fort_wfp == 1, proportion=TRUE, na.rm = T)*100,
-    vitb12_inad_fort_wfp = srvyr::survey_mean(vitb12_inad_fort_wfp == 1, proportion=TRUE,na.rm = T)*100,
-    thia_inad_fort_wfp = srvyr::survey_mean(thia_inad_fort_wfp == 1, proportion=TRUE,na.rm = T)*100
-  )%>% 
-  mutate(res_quintile = paste0(sector,"_",res_quintile)) %>% 
-  left_join(
-    fe_full_prob(hh_mn_intake %>% 
-                   rename(ai_afe = iron_mg) %>% 
-                   left_join(level01, by="common_id") %>% 
-                   left_join(hh_expenditure), group1 = sector, group2 = res_quintile, bio_avail = 10) %>% 
-      rename(res_quintile = subpopulation,
-             fe_inad = prev_inad),
-    by = 'res_quintile'
+    across(
+      c(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg),
+      ~sum(., na.rm = T)
+      
+    )
   ) %>% 
-  left_join(
-    fe_full_prob(hh_mn_intake_fort %>% 
-                   rename(ai_afe = iron_mg_fort) %>% 
-                   left_join(level01, by="common_id")%>% 
-                   left_join(hh_expenditure), group1 = sector, group2 = res_quintile, bio_avail = 10)%>% 
-      rename(res_quintile = subpopulation,
-             fe_inad_fort = prev_inad),
-    by = 'res_quintile'
-  )%>% 
-  left_join(
-    fe_full_prob(hh_mn_intake_fort %>% 
-                   rename(ai_afe = iron_mg_fort_wfp) %>% 
-                   left_join(level01, by="common_id")%>% 
-                   left_join(hh_expenditure), group1 = sector, group2 = res_quintile, bio_avail = 10)%>% 
-      rename(res_quintile = subpopulation,
-             fe_inad_fort = prev_inad),
-    by = 'res_quintile'
+  ungroup() %>% 
+  group_by(food_group) %>% 
+  summarise(
+    across(
+      c(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg),
+      ~mean(.)
+    
+    )
   )
 
+
+## summarise micronutrient contributions from food groups at state level to see regional differences
+state_foodggroup_average <-  food_group_full %>% 
+  group_by(common_id,state, food_group) %>% 
+  summarise(
+    across(
+      c(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg),
+      ~sum(., na.rm = T)
+      
+    )
+  ) %>% 
+  ungroup() %>% 
+  group_by(food_group,state) %>% 
+  summarise(
+    across(
+      c(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg),
+      ~mean(.)
+      
+    )
+  )
+
+
+
+# create list of micronutrient names
+micronutrient <- c(colnames(national_foodgroup_average[3:11]))
+
+
+
+state_prop_boxes <- function(state_num){
+  # function reads in a state number and produces proportional box-plots
+  # 
+  mn_fg_plots <- list()
+for(item in micronutrient){
+  print(item)
+  print({{state_num}})
+  p1 <-  state_foodggroup_average %>%
+    
+    filter(state == state_num & !is.na(food_group)) %>%
+    ggplot(aes(area = !!sym(item),
+               fill = stringr::str_to_title(
+                 str_replace_all(food_group, "_", " and ")   ),
+               label =
+                 stringr::str_to_title(
+                   str_replace_all(food_group, "_", " and ")         )
+   )) +
+    geom_treemap() +
+    geom_treemap_text( colour = "darkblue", place = "topleft", alpha = 0.6,
+                       grow = FALSE,min.size = 6)+
+    labs(title =
+           stringr::str_to_title(stringr::str_split_i(item,
+                                                      "\\_",
+                                                      1)),
+
+    )+
+    scale_fill_brewer(palette = "Set3")+
+    # guides(fill=guide_legend())+
+    theme(legend.position="bottom",
+          legend.spacing.x = unit(0, 'cm'))+
+    guides(fill = guide_legend(title="Food group",label.position = "bottom"))
+  # theme(legend.direction = "horizontal", legend.position = "bottom")+
+  # guides(fill = "none")+
+  theme_ipsum()
+  mn_fg_plots[[item]] <- p1
+}
+  return(mn_fg_plots)
+}
+state_prop_boxes("08")
+
+
+
+nat_fg <- ggpubr::ggarrange(plotlist = mn_fg_plots, common.legend = TRUE)
+
+raj_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("08"), common.legend = T)
+up_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("09"), common.legend = T)
+tn_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("23"), common.legend = T)
+ch_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("22"), common.legend = T)
+mz_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("17"), common.legend = T)
+
+raj_fg <- ggpubr::annotate_figure(raj_fg, top = ggpubr::text_grob("Rajasthan", face = "bold", size = 15))
+up_fg <- ggpubr::annotate_figure(up_fg, top = ggpubr::text_grob("Uttar Pradesh", face = "bold", size = 15))
+tn_fg <- ggpubr::annotate_figure(tn_fg, top = ggpubr::text_grob("Tamil Nadu", face = "bold", size = 15))
+ch_fg <- ggpubr::annotate_figure(ch_fg, top = ggpubr::text_grob("Chhattisgarh", face = "bold", size = 15))
+mz_fg <- ggpubr::annotate_figure(mz_fg, top = ggpubr::text_grob("Mizoram", face = "bold", size = 15))
+nat_fg <- ggpubr::annotate_figure(nat_fg, top =ggpubr::text_grob("National", face = "bold", size = 15))
+
+
+
+ggsave(paste0(figure_path,"rj_fg.png"), raj_fg, height = 8, width = 6)
+ggsave(paste0(figure_path,"up_fg.png"), up_fg, height = 8, width = 6)
+ggsave(paste0(figure_path,"tn_fg.png"), tn_fg, height = 8, width = 6)
+ggsave(paste0(figure_path,"ch_fg.png"), ch_fg, height = 8, width = 6)
+ggsave(paste0(figure_path,"mz_fg.png"), mz_fg, height = 8, width = 6)
+ggsave(paste0(figure_path,"nat_fg.png"), nat_fg, height = 8, width = 6)
+
+
+
+food_group_full %>% 
+  group_by(common_id, food_group) %>% 
+  summarise(
+    across(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg)
+    )
+
+
+x <- 
+  hh_expenditure %>% 
+  as_survey_design(ids = common_id, weights = multiplier, strata = sector) %>% 
+  group_by(state) %>% 
+  summarise(
+    prop_poorest = survey_mean(res_quintile  == 1, proportion = T, na.rm = T)
+  )
+
+  
+  
 # dumbell plots
 
 

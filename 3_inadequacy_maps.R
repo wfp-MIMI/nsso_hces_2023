@@ -29,6 +29,13 @@ source(here::here("../MIMI1_archive/universal_functions/iron_full_probability/sr
 
 # rm(list = ls())
 
+# set paths
+figure_path <- "figures/"
+raw_path <- "data/raw/"
+processed_path <- "data/processed/"
+
+# read data
+
 food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
 hh_mn_intake <- readRDS("ind_nss2223_base_case.rds")
 # read in the fct
@@ -39,11 +46,10 @@ ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Progra
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
 nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
 
-nss_region_inad_rice <- readRDS("nss_region_inad_rice.rds" )
-nss_region_inad_wf <- readRDS("nss_region_inad_rice.rds" )
+nss_region_inad_rice <- readRDS("nss_region_inad_rice.rds")
+nss_region_inad_wf <- readRDS("nss_region_inad_wf.rds" )
 food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
 
-figure_path <- "figures/"
 
 ################################################################################
 
@@ -79,13 +85,15 @@ inadequacy_map <- function(micronutrient,
 }
 
 
+inadequacy_map()
+
 map_list <- function(input_list){
   #takes in a list of column names of MNs and plots inadequacy maps
   output_list <- list()
   
   
   for(i in input_list){
-    p <- inadequacy_map(i[1],paste(i[2], "- ", {{vehicle}}))
+    p <- inadequacy_map(i[1],paste(i[2], "- "))
     
     output_list[[i[1]]] <- p
     
@@ -96,7 +104,7 @@ map_list <- function(input_list){
 ### Inadequacy Maps ############################################################
 
 #create a shapefile at nss_region level
-nss_region_inad_sp_rice <- nss_region_inad_rice %>% 
+nss_region_inad_sp <- nss_region_inad_rice %>% 
   mutate(nss_region = as.numeric(nss_region)) %>% 
   left_join(nss_region_shapefile, by= 'nss_region') %>% 
   st_as_sf()
@@ -150,7 +158,7 @@ maps_rice_wfp <- map_list(improved_rice)
 
 for(i in 1:8){
   map <- maps_rice_base[[i]]
-  tmap_save(map, paste0(figure_path,"base/", base_rice[[i]][1] , ".svg"),
+  tmap_save(map, paste0(figure_path,"base/", base_rice[[i]][1] , ".png"),
          width = 8, height = 9, units = "in")
 
 }
@@ -158,14 +166,14 @@ for(i in 1:8){
 
 for(i in 1:8){
   map <- maps_rice_current[[i]]
-  tmap_save(map, paste0(figure_path,"current_rice/", current_rice[[i]][1] , ".svg"),
+  tmap_save(map, paste0(figure_path,"current_rice/", current_rice[[i]][1] , ".png"),
             width = 8, height = 9, units = "in")
   
 }
 
 for(i in 1:8){
   map <- maps_rice_wfp[[i]]
-  tmap_save(map, paste0(figure_path,"improved_rice/", improved_rice[[i]][1] , ".svg"),
+  tmap_save(map, paste0(figure_path,"improved_rice/", improved_rice[[i]][1] , ".png"),
             width = 8, height = 9, units = "in")
   
 }
@@ -176,27 +184,13 @@ for(i in 1:8){
 
 
 #create a shapefile at nss_region level
-nss_region_inad_sp <- nss_region_inad_wf %>% 
+nss_region_inad_sp <-  nss_region_inad_wf %>% 
   mutate(nss_region = as.numeric(nss_region)) %>% 
   left_join(nss_region_shapefile, by= 'nss_region') %>% 
   st_as_sf()
 
 
 
-
-
-base_rice <- list(
-  c("folate_inad", "Folate base"),
-  c("vitb12_inad", "Vitamin B12 base"),
-  c("fe_inad", "Iron base"),
-  c("vita_inad", "Vitamin A base"),
-  c("thia_inad", "Thiamin base"),
-  c("niac_inad", "Niacin base"),
-  c("vitb6_inad", "Vitamin B6 base"),
-  c("zn_inad", "Zinc base")
-)
-
-base_rice[[2]][1]
 current_wf <- list(
   c("folate_inad_fort", "Folate current mandatory"),
   c("vitb12_inad_fort", "Vitamin B12 current mandatory"),
@@ -233,14 +227,14 @@ maps_wf_wfp <- map_list(improved_wf)
 
 for(i in 1:8){
   map <- maps_wf_current[[i]]
-  tmap_save(map, paste0(figure_path,"current_wf/", current_wf[[i]][1] , ".svg"),
+  tmap_save(map, paste0(figure_path,"current_wf/", current_wf[[i]][1] , ".png"),
             width = 8, height = 9, units = "in")
   
 }
 
 for(i in 1:8){
-  map <- maps_rice_wfp[[i]]
-  tmap_save(map, paste0(figure_path,"improved_wf/", improved_wf[[i]][1] , ".svg"),
+  map <- maps_wf_wfp[[i]]
+  tmap_save(map, paste0(figure_path,"improved_wf/", improved_wf[[i]][1] , ".png"),
             width = 8, height = 9, units = "in")
   
 }
@@ -248,7 +242,7 @@ for(i in 1:8){
 ################################################################################
 # reach
 
-calculate_reach
+### RICE
 
 reach_rice  <- food_consumption_daily_afe %>% 
   mutate(consumed_pds_or_free = ifelse(Item_Code %in% c(61,101),1,0),
@@ -269,11 +263,208 @@ reach_rice  <- food_consumption_daily_afe %>%
     
   )
 
+intake_rice  <- food_consumption_daily_afe %>% 
+  filter(Item_Code %in% c(101,61))%>% 
+  group_by(common_id) %>% 
+  mutate(free = ifelse(Item_Code == 61, Total_Consumption_Quantity, 0),
+         pds = ifelse(Item_Code == 101, Total_Consumption_Quantity, 0),
+         combind = sum(Total_Consumption_Quantity)) %>% 
+  summarise(free = sum(free),
+            pds = sum(pds),
+            combind = combind) %>% 
+  
+  slice(1) %>% 
+  ungroup() %>% 
+  left_join(level01 %>% 
+              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  srvyr::group_by(nss_region) %>% 
+  summarise(
+    
+    pc_pds_or_free =  survey_mean(combind,na.rm = T),
+    free = survey_mean(free,na.rm = T),
+    pds = survey_mean(pds, na.rm = T)
+  ) 
+
+
+
+reach_intake <- 
+  reach_rice %>% 
+  left_join(intake_rice) %>% 
+    mutate(
+      across(
+        everything(),
+        ~ifelse(is.na(.),0,.)
+      )
+    ) %>% 
+  mutate(
+    reach_bins = cut(
+      consumed_pds_or_free, breaks = c(0,25,50,75,100),include.lowest = T
+    ),
+    intake_bins = cut(pc_pds_or_free, breaks = c(0,50,100,150, 300), include.lowest = T)
+  ) %>% 
+    select(nss_region,pc_pds_or_free, reach_bins, intake_bins) %>% 
+  mutate(nss_region = as.numeric(nss_region)) %>% 
+  left_join(nss_region_shapefile, by= 'nss_region') %>% 
+  st_as_sf() 
+
+
+data_rice <- bi_class(reach_intake, x =reach_bins , y = intake_bins, dim = 4 )
+
+
+bi_map_rice <- ggplot() + 
+  geom_sf(data = data_rice, mapping = aes(fill = bi_class), color = NA,show.legend = F)+
+  bi_scale_fill(pal = "DkBlue2",dim = 4)+
+  bi_theme()+
+  geom_sf(data = ind_state, fill= NA, color = 'black', lwd = 1) + 
+  labs(subtitle = "PDS Rice - coverage and consumption", )
+  
+break_vals <- bi_class_breaks(reach_intake, x =reach_bins , y = intake_bins, dim = 4 )
+
+
+legend_rice <- bi_legend(pal = "DkBlue2",
+                    dim = 4,
+                    xlab = "Higher Reach (%) ",
+                    ylab = "Higher Consumption (g) ",
+                    size = 8, 
+                    breaks = break_vals)
+
+rice_bivariate <- ggdraw() +
+  draw_plot(bi_map_rice, 0, 0, 1, 1) +
+  draw_plot(legend_rice, 0.65, .2, 0.2, 0.2)
+
+rice_bivariate
+# wheat flour
+
+
+reach_wf  <- food_consumption_daily_afe %>% 
+  mutate(consumed_pds_or_free = ifelse(Item_Code %in% c(62,107),1,0),
+         consumed_pds = ifelse(Item_Code == 107,1,0),
+         consumed_free = ifelse(Item_Code == 62,1,0)) %>% 
+  group_by(common_id) %>% 
+  summarise(consumed_pds_or_free = ifelse(sum(consumed_pds_or_free)==0,0,1),
+            consumed_pds= ifelse(sum(consumed_pds)==0,0,1),
+            consumed_free = ifelse(sum(consumed_free)==0,0,1)) %>% 
+  ungroup() %>% 
+  left_join(level01 %>% 
+              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  srvyr::group_by(nss_region) %>% 
+  summarise(
+    consumed_pds_or_free =  survey_mean(consumed_pds_or_free == 1, proportion = TRUE)*100,
+    consumed_pds =  survey_mean(consumed_pds ==1, proportion = TRUE)*100,
+    consumed_free = survey_mean(consumed_free ==1, proportion = TRUE)*100
+    
+  )
+
+intake_wf  <- food_consumption_daily_afe %>% 
+  filter(Item_Code %in% c(107,62))%>% 
+  group_by(common_id) %>% 
+  mutate(free = ifelse(Item_Code == 62, Total_Consumption_Quantity, 0),
+         pds = ifelse(Item_Code == 107, Total_Consumption_Quantity, 0),
+         combind = sum(Total_Consumption_Quantity)) %>% 
+  summarise(free = sum(free),
+            pds = sum(pds),
+            combind = combind) %>% 
+  
+  slice(1) %>% 
+  ungroup() %>% 
+  left_join(level01 %>% 
+              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  srvyr::group_by(nss_region) %>% 
+  summarise(
+    
+    pc_pds_or_free =  survey_mean(combind,na.rm = T),
+    free = survey_mean(free,na.rm = T),
+    pds = survey_mean(pds, na.rm = T)
+  )
+
+
+
+reach_intake_wf <- reach_wf %>% 
+  left_join(intake_wf) %>% 
+  mutate(
+    across(
+      everything(),
+      ~ifelse(is.na(.),0,.)
+    )
+  ) %>% 
+  mutate(
+    reach_bins = cut(
+      consumed_pds_or_free, breaks = c(0,25,50,75,100),include.lowest = T
+    ),
+    intake_bins = cut(pc_pds_or_free, breaks = c(0,50,100,150, 300), include.lowest = T)
+  ) %>% 
+  select(nss_region,pc_pds_or_free, reach_bins, intake_bins) %>% 
+  mutate(nss_region = as.numeric(nss_region)) %>% 
+  left_join(nss_region_shapefile, by= 'nss_region') %>% 
+  st_as_sf() 
+
+
+data_wf <- bi_class(reach_intake_wf, x =reach_bins , y = intake_bins, dim = 4 )
+
+
+bi_map_wf <- ggplot() + 
+  geom_sf(data = data_wf, mapping = aes(fill = bi_class), color = NA,show.legend = F)+
+  bi_scale_fill(pal = "DkBlue2",dim = 4)+
+  bi_theme()+
+  geom_sf(data = ind_state, fill= NA, color = 'black', lwd = 1)+
+  labs(subtitle = "PDS Wheat - coverage and consumption", )
+
+legend_wf <- bi_legend(pal = "DkBlue2",
+                         dim = 4,
+                       xlab = "Higher Coverage (%) ",
+                       ylab = "Higher Consumption (g) ",
+                       size = 8, 
+                       breaks = break_vals)
+
+ggsave(paste0(figure_path,"bi_legend.png"), plot= legend_wf,   width = 2, height = 2, units = 'in')
+
+ggsave(paste0(figure_path,"bimap_wf.png"),bi_map_wf, width = 8, height= 9, units = 'in')
+
+ggsave(paste0(figure_path,"bimap_rice.png"),bi_map_rice, width = 8, height= 9, units = 'in')
+
+wf_bivariate <- ggdraw() +
+  draw_plot(bi_map_wf, 0, 0, 1, 1) +
+  draw_plot(legend_wf, 0.65, .2, 0.2, 0.2)
+
+wf_bivariate
+
+
+
+
+
+
 
 reach_rice_state  <-food_consumption_daily_afe %>% 
   mutate(consumed_pds_or_free = ifelse(Item_Code %in% c(61,101),1,0),
          consumed_pds = ifelse(Item_Code == 101,1,0),
          consumed_free = ifelse(Item_Code == 61,1,0)) %>% 
+  group_by(common_id) %>% 
+  summarise(consumed_pds_or_free = ifelse(sum(consumed_pds_or_free)==0,0,1),
+            consumed_pds= ifelse(sum(consumed_pds)==0,0,1),
+            consumed_free = ifelse(sum(consumed_free)==0,0,1)) %>% 
+  left_join(level01 %>% 
+              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  srvyr::group_by(state) %>% 
+  summarise(
+    consumed_pds_or_free =  survey_mean(consumed_pds_or_free == 1, proportion = TRUE)*100,
+    consumed_pds =  survey_mean(consumed_pds ==1, proportion = TRUE)*100,
+    consumed_free = survey_mean(consumed_free ==1, proportion = TRUE)*100
+    
+  )
+
+
+
+
+
+
+wf_rice_state  <-food_consumption_daily_afe %>% 
+  mutate(consumed_pds_or_free = ifelse(Item_Code %in% c(62,107),1,0),
+         consumed_pds = ifelse(Item_Code == 107,1,0),
+         consumed_free = ifelse(Item_Code == 62,1,0)) %>% 
   group_by(common_id) %>% 
   summarise(consumed_pds_or_free = ifelse(sum(consumed_pds_or_free)==0,0,1),
             consumed_pds= ifelse(sum(consumed_pds)==0,0,1),
@@ -313,7 +504,7 @@ intake_rice_state  <- food_consumption_daily_afe %>%
     pds = survey_mean(pds, na.rm = T)
   )
 
-intake_and_reach = inner_join(intake_rice_state,reach_rice_state,by  = "state")
+
 
 
 reach_rice_state %>% 
@@ -334,8 +525,9 @@ reach_rice_sp <- reach_rice %>%
 
 rice_reach_map <- tm_shape(ind_state) +
   tm_fill(col = "grey77") +
-  tm_shape(reach_rice_sp) +
-  tm_fill(col = "consumed_pds_or_free", style = "cont", breaks = seq(0,100,by=10),
+  tm_shape(reach_intake) +
+  tm_fill(col = "pc_pds_or_free", style = "cont",
+          # breaks = seq(0,100,by=10),
           # palette = (wesanderson::wes_palette("Zissou1Continuous")),
           title = "Reach of PDS and free rice" ,
           legend.is.portrait = FALSE
@@ -353,7 +545,7 @@ rice_reach_map <- tm_shape(ind_state) +
   tm_legend(show = F)
 
 
-tmap_save(rice_reach_map, paste0(figure_path,"rice_reach.svg"), width = 8, height = 9, units = "in")
+tmap_save(rice_reach_map, paste0(figure_path,"rice_reach.png"), width = 8, height = 9, units = "in")
 
 tm_shape(ind_state) +
   tm_fill(col = "grey77") +

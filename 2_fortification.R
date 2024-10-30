@@ -26,6 +26,13 @@ rm(list= c("rq_packages", "installed_packages"))
 source(here::here("../MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"))
 
 ################################################################################
+# set paths
+figure_path <- "figures/"
+raw_path <- "data/raw/"
+processed_path <- "data/processed/"
+
+
+
 file_list = list.files("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/")
 # haven::read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/level06.dta")
 data_list <- lapply(paste0("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/",file_list), haven::read_dta)
@@ -109,7 +116,7 @@ ind_fort_spec <-
     folate_mcg_fort_wfp = c(130,130,260,260),
     vitb12_mcg_fort_wfp = c(1,1,1,1),
     fe_mg_fort_wfp = c(7,7,4,4),#wf = ferrous sulfate
-    zn_mg_fort_wfp = c(6,6, 9.5,9.5)
+    zn_mg_fort_wfp = c(6,6, 5.5,5.5)
     
   )
 
@@ -231,6 +238,7 @@ rice_contributions <- food_consumption_daily_afe %>%
   )
 
 
+
 wf_contributions <- food_consumption_daily_afe %>% 
   select(
     common_id,Item_Code,Total_Consumption_Quantity) %>% 
@@ -282,7 +290,8 @@ hh_mn_intake_fort_rice <- hh_mn_intake%>%
 
 # delete rice contributions df
 rm(rice_contributions)
-
+# x <- level01 %>% filter(state == "08") %>% 
+#   left_join(hh_mn_intake_fort_rice, by= 'common_id')
 
 ## Wheat flour 
 
@@ -395,13 +404,13 @@ all_inad_wf <- national_inad_wf %>%
 
 
 # summary csvs
-# write.csv(all_inad_wf,"india_wf_inad.csv" )
-# write.csv(all_inad_rice,"india_rice_inad.csv" )
+write.csv(all_inad_wf,"india_wf_inad.csv")
+write.csv(all_inad_rice,"india_rice_inad.csv" )
 
 # r data for further analysis
 saveRDS(hh_mn_intake_fort_wf, "ind_fort_wf.rds")
 saveRDS(hh_mn_intake_fort_rice, "ind_fort_rice.rds")
 saveRDS(nss_region_inad, "nss_region_inad_rice.rds" )
-saveRDS(nss_region_inad_wf, "nss_region_inad_rice.rds" )
+saveRDS(nss_region_inad_wf, "nss_region_inad_wf.rds" )
 
 rm(list = ls())
