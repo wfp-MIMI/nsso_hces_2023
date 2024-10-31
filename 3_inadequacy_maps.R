@@ -11,7 +11,8 @@
 rq_packages <- c("tidyverse","dplyr","readr","srvyr","ggplot2", "tidyr",
                  "ggridges", "gt", "haven","foreign",
                  "tmap","sf","rmapshaper","readxl","hrbrthemes",
-                 "wesanderson","treemap","treemapify")
+                 "wesanderson","treemap","treemapify", 
+                "biscale")
 
 installed_packages <- rq_packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
