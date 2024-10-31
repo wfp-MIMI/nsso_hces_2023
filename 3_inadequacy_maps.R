@@ -240,10 +240,11 @@ for(i in 1:8){
 }
 
 ################################################################################
-# reach
+# reach/coverage of vehciles
 
 ### RICE
 
+# calucalte the reach of rice
 reach_rice  <- food_consumption_daily_afe %>% 
   mutate(consumed_pds_or_free = ifelse(Item_Code %in% c(61,101),1,0),
          consumed_pds = ifelse(Item_Code == 101,1,0),
@@ -263,6 +264,7 @@ reach_rice  <- food_consumption_daily_afe %>%
     
   )
 
+# calcaulte the per-capita consumotion
 intake_rice  <- food_consumption_daily_afe %>% 
   filter(Item_Code %in% c(101,61))%>% 
   group_by(common_id) %>% 
@@ -287,7 +289,7 @@ intake_rice  <- food_consumption_daily_afe %>%
   ) 
 
 
-
+# have a joined df of reach and pc-consumption
 reach_intake <- 
   reach_rice %>% 
   left_join(intake_rice) %>% 
@@ -299,8 +301,11 @@ reach_intake <-
     ) %>% 
   mutate(
     reach_bins = cut(
+      # for bivariate maps, you need to break into classes
+      # I have chosen quartiles for reach
       consumed_pds_or_free, breaks = c(0,25,50,75,100),include.lowest = T
     ),
+    # For pc-consumption I spit into 0-50, 50-100, 100-150, and 150-300 g/afe/day
     intake_bins = cut(pc_pds_or_free, breaks = c(0,50,100,150, 300), include.lowest = T)
   ) %>% 
     select(nss_region,pc_pds_or_free, reach_bins, intake_bins) %>% 
@@ -309,19 +314,24 @@ reach_intake <-
   st_as_sf() 
 
 
+##### Bi-variate mapping #######
+
+# create a bi classs
 data_rice <- bi_class(reach_intake, x =reach_bins , y = intake_bins, dim = 4 )
 
 
+# using ggplot and bi_scale, create a bivariate map
 bi_map_rice <- ggplot() + 
   geom_sf(data = data_rice, mapping = aes(fill = bi_class), color = NA,show.legend = F)+
   bi_scale_fill(pal = "DkBlue2",dim = 4)+
   bi_theme()+
   geom_sf(data = ind_state, fill= NA, color = 'black', lwd = 1) + 
   labs(subtitle = "PDS Rice - coverage and consumption", )
-  
+
+# create a df of the breaks for each exis
 break_vals <- bi_class_breaks(reach_intake, x =reach_bins , y = intake_bins, dim = 4 )
 
-
+#create a bivariate legend
 legend_rice <- bi_legend(pal = "DkBlue2",
                     dim = 4,
                     xlab = "Higher Reach (%) ",
@@ -329,14 +339,17 @@ legend_rice <- bi_legend(pal = "DkBlue2",
                     size = 8, 
                     breaks = break_vals)
 
+# put legend and map together
 rice_bivariate <- ggdraw() +
   draw_plot(bi_map_rice, 0, 0, 1, 1) +
   draw_plot(legend_rice, 0.65, .2, 0.2, 0.2)
 
 rice_bivariate
-# wheat flour
 
 
+# WHEAT FLOUR
+
+# create a df of reach of wf
 reach_wf  <- food_consumption_daily_afe %>% 
   mutate(consumed_pds_or_free = ifelse(Item_Code %in% c(62,107),1,0),
          consumed_pds = ifelse(Item_Code == 107,1,0),
@@ -357,6 +370,7 @@ reach_wf  <- food_consumption_daily_afe %>%
     
   )
 
+#calculate pc-consumtion of wf
 intake_wf  <- food_consumption_daily_afe %>% 
   filter(Item_Code %in% c(107,62))%>% 
   group_by(common_id) %>% 
@@ -381,7 +395,7 @@ intake_wf  <- food_consumption_daily_afe %>%
   )
 
 
-
+# join reach and pc-consumtption
 reach_intake_wf <- reach_wf %>% 
   left_join(intake_wf) %>% 
   mutate(
@@ -402,9 +416,12 @@ reach_intake_wf <- reach_wf %>%
   st_as_sf() 
 
 
+#### BIVARIATE MAP #####
+
+### Create bi-class
 data_wf <- bi_class(reach_intake_wf, x =reach_bins , y = intake_bins, dim = 4 )
 
-
+# plot the map
 bi_map_wf <- ggplot() + 
   geom_sf(data = data_wf, mapping = aes(fill = bi_class), color = NA,show.legend = F)+
   bi_scale_fill(pal = "DkBlue2",dim = 4)+
@@ -412,6 +429,7 @@ bi_map_wf <- ggplot() +
   geom_sf(data = ind_state, fill= NA, color = 'black', lwd = 1)+
   labs(subtitle = "PDS Wheat - coverage and consumption", )
 
+# new legend
 legend_wf <- bi_legend(pal = "DkBlue2",
                          dim = 4,
                        xlab = "Higher Coverage (%) ",
@@ -419,11 +437,6 @@ legend_wf <- bi_legend(pal = "DkBlue2",
                        size = 8, 
                        breaks = break_vals)
 
-ggsave(paste0(figure_path,"bi_legend.png"), plot= legend_wf,   width = 2, height = 2, units = 'in')
-
-ggsave(paste0(figure_path,"bimap_wf.png"),bi_map_wf, width = 8, height= 9, units = 'in')
-
-ggsave(paste0(figure_path,"bimap_rice.png"),bi_map_rice, width = 8, height= 9, units = 'in')
 
 wf_bivariate <- ggdraw() +
   draw_plot(bi_map_wf, 0, 0, 1, 1) +
@@ -432,8 +445,18 @@ wf_bivariate <- ggdraw() +
 wf_bivariate
 
 
+# save the bivaraite maps
 
 
+ggsave(paste0(figure_path,"bi_legend.png"), plot= legend_wf,   width = 2, height = 2, units = 'in')
+
+ggsave(paste0(figure_path,"bimap_wf.png"),bi_map_wf, width = 8, height= 9, units = 'in')
+
+ggsave(paste0(figure_path,"bimap_rice.png"),bi_map_rice, width = 8, height= 9, units = 'in')
+
+
+#####################################################################################################
+# calculating reach and pc-consumption at different levels
 
 
 
