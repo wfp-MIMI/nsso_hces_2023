@@ -11,3 +11,7 @@
 .Rproj.user
 *.RDS
 *.svg
+
+
+# Not loading .xlsx from inter-output folder
+inter-output/*.xlsx
