@@ -124,7 +124,7 @@ t_test[nrow(t_test), "test_nutrient"] <- median_vars[j]
 
 # Same loop for food and nutrient t.test (log-tranformed)
 
-t_test <- as.data.frame(matrix( ncol = 4))
+t_test <- as.data.frame(matrix( ncol = 100))
 
 for(i in 1:length(test)){
   
@@ -160,4 +160,89 @@ for(i in 1:length(test)){
 }
 
 
+## Testing loop w/ error as backstop -----
 
+
+# Selecting the nutrients 
+#vars <- c("VITA_RAE", "VITB12", "FOLDE", "ZN", "FE")
+vars <- names(data.df)[6:11]
+
+# Getting the list of food sorted by most consumed (freq. (no. of HHs))
+food_list <- data.df %>% filter(!is.na(quantity_100g)) %>%
+  group_by(Item_Code, item_name) %>% 
+  summarise(N = n(), 
+            Mean_qty = mean(quantity_100g, na.rm = TRUE)) %>%
+  arrange(desc(N))
+
+
+# A loop that generate a list of dataset w/ the mean, sd and median intakes
+# excluding one food item for the variables selected
+
+i = 1
+j=1
+test <- list()  
+t_test <- as.data.frame(matrix( ncol = 10))
+
+
+# Adding the baseline (no food removed)
+test[[1]] <- data.df %>% filter(!is.na(quantity_100g)) %>% 
+  # mutate(across(vars, ~as.numeric)) %>% 
+  group_by(common_id) %>%       
+  summarise(across(vars,  list(Mean = mean, SD = sd,
+                               Median = median),
+                   na.rm = TRUE, .names = "{.fn}.{.col}")) %>% 
+  mutate(test_food = "baseline")
+
+for(i in 1:nrow(food_list)){
+  
+  n <- i+1
+  test[[n]] <- data.df %>% filter(!is.na(quantity_100g)) %>% 
+    filter(!Item_Code %in% food_list[i,1 ]) %>% 
+    group_by(common_id) %>%       
+    summarise(across(vars,  list(Mean = mean, SD = sd,
+                                 Median = median), 
+                     na.rm = TRUE, .names = "{.fn}.{.col}")) %>% 
+    # Adding a variable with the item excluded
+    mutate(test_food = paste0(food_list[i,1 ], "_", gsub(" ", "", food_list[i,2])))
+  
+  print(n)
+    
+    for(j in 1:length(mean_vars)){
+      
+      mod2=try(t.test(log(as.numeric(unlist(test[[n]][, mean_vars[j]]))), 
+                      log(as.numeric(unlist(test[[1]][, mean_vars[j]])))),TRUE)
+      
+      if(isTRUE(class(mod2)=="try-error")) { next }
+      
+      else{
+        
+      x <- t.test(log(as.numeric(unlist(test[[n]][, mean_vars[j]]))), 
+                  log(as.numeric(unlist(test[[1]][, mean_vars[j]]))))
+      
+      t_test[nrow(t_test)+1,]<- broom::tidy(x)
+      t_test[nrow(t_test), "test_food"] <- paste0(food_list[i,1 ], "_", gsub(" ", "", food_list[i,2]))
+      t_test[nrow(t_test), "test_nutrient"] <- mean_vars[j]
+      
+    }
+    
+  }
+  
+  print(i)
+  print(n)
+  
+  
+}
+
+
+names(t_test)[1:10] <- names(broom::tidy(x))
+names(t_test)[11:12] <- c("test_food","test_nutrient" )
+
+
+# Saving results form loop
+write(t_test, here::here( "inter-output", paste0("t_test_food_nutrient_", Sys.Date(), ".csv")))
+
+t_test %>% dplyr::filter(!is.na(estimate)) %>% 
+  select(p.value, test_food, test_nutrient) %>% 
+  tidyr::pivot_wider(names_from = "test_nutrient",
+              values_from = "p.value") %>% 
+  filter(Mean.zinc_mg<0.05)
