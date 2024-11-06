@@ -28,7 +28,7 @@ names(data_list) <- tools::file_path_sans_ext(file_list)
 
 
 ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
-ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
+# ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lCss1819_adm2.shp")
 nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
 
 # read in the fct
@@ -184,15 +184,6 @@ rm(quant_cutpoints)
 
 
 
-# check whether drop down items are counted twice (they are)
-x <- level05_30day %>% 
-  filter(Item_Code == 116)
-
-y = level05_30day %>% 
-  filter(common_id == "HCES2022653801030311623025 203121  315")
-
-rm(x,y)
-
 ################################################################################
 
 
@@ -216,6 +207,23 @@ hh_mn_intake <- food_consumption_daily_afe %>%
       ~sum(., na.rm = T)
     )
   )
+
+
+
+# for lucia
+
+hh_2500 <- hh_mn_intake[1:2500,]
+
+hh_mn_intake_lucia <- food_consumption_daily_afe %>% 
+  filter(common_id %in% hh_2500$common_id) %>% 
+  inner_join(ind_202223_fct , by=c("Item_Code" ="item_code" )) %>% 
+  mutate(quantity_100g = Total_Consumption_Quantity/100,
+         across(c(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg ),
+                ~.x*quantity_100g)
+  ) %>% 
+  select(c(common_id, Item_Code, item_name,quantity_100g, energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, zinc_mg, vita_mcg))
+
+write.csv(hh_mn_intake_lucia, "nsso_subset_lucia.csv")
 
 # look at the energy distribution
 hh_mn_intake %>% 
@@ -275,9 +283,10 @@ hh_expenditure <-
 
 ### Save data
 
-saveRDS(hh_expenditure, file = "ind_nss2223_hh_expenditure.rds")
-saveRDS(food_consumption_daily_afe, file = "ind_nss2223_food_consumption.rds")
-saveRDS(hh_mn_intake, file = "ind_nss2223_base_case.rds")
+
+saveRDS(hh_expenditure, file = "data/processed/ind_nss2223_hh_expenditure.rds")
+saveRDS(food_consumption_daily_afe, file = "data/processed/ind_nss2223_food_consumption.rds")
+saveRDS(hh_mn_intake, file = "data/processed/ind_nss2223_base_case.rds")
 
 
 rm(list = ls())

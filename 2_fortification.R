@@ -40,9 +40,9 @@ names(data_list) <- tools::file_path_sans_ext(file_list)
 level01 <- data_list$level01
 
 
-food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
-hh_mn_intake <- readRDS("ind_nss2223_base_case.rds")
-hh_expenditure <- readRDS("ind_nss2223_hh_expenditure.rds")
+food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
+hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
+hh_expenditure <- readRDS(paste0(processed_path,"ind_nss2223_hh_expenditure.rds"))
 # read in the fct
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
@@ -127,6 +127,9 @@ ind_fort_spec <-
 calculate_inadequacy <- function(micronutrient, ear_cut){return(ifelse(micronutrient<ear_cut,1,0))}
 
 aggregated_inadequacy <- function(data,group){
+  # for each micronutrient and fortification scenario, we compare to the EAR value
+  # then calculate a population risk of inadequacy
+  #
   # print({{group}})
   group_sym <- ensym(group) 
   
@@ -216,6 +219,7 @@ aggregated_inadequacy <- function(data,group){
 # add contributions to fortified pds rice
 
 rice_contributions <- food_consumption_daily_afe %>% 
+  # create a data frame that has the potential contributions from fortifying pds rice
   select(
     common_id,Item_Code,Total_Consumption_Quantity) %>% 
   #filter only pds rice and free rice and other sources
