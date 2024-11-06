@@ -188,9 +188,7 @@ t_test <- as.data.frame(matrix( ncol = 10))
 test[[1]] <- data.df %>% filter(!is.na(quantity_100g)) %>% 
   # mutate(across(vars, ~as.numeric)) %>% 
   group_by(common_id) %>%       
-  summarise(across(vars,  list(Mean = mean, SD = sd,
-                               Median = median),
-                   na.rm = TRUE, .names = "{.fn}.{.col}")) %>% 
+  summarise(across(vars, list(Sum = sum), na.rm=TRUE, .names = "{.fn}.{.col}") ) %>% 
   mutate(test_food = "baseline")
 
 for(i in 1:nrow(food_list)){
@@ -199,29 +197,30 @@ for(i in 1:nrow(food_list)){
   test[[n]] <- data.df %>% filter(!is.na(quantity_100g)) %>% 
     filter(!Item_Code %in% food_list[i,1 ]) %>% 
     group_by(common_id) %>%       
-    summarise(across(vars,  list(Mean = mean, SD = sd,
-                                 Median = median), 
+    summarise(across(vars,  list(Sum=sum), 
                      na.rm = TRUE, .names = "{.fn}.{.col}")) %>% 
     # Adding a variable with the item excluded
     mutate(test_food = paste0(food_list[i,1 ], "_", gsub(" ", "", food_list[i,2])))
   
   print(n)
-    
-    for(j in 1:length(mean_vars)){
+
+sum_vars <- grep("Sum", names(test[[1]]), value = TRUE)
+  
+    for(j in 1:length(sum_vars)){
       
-      mod2=try(t.test(log(as.numeric(unlist(test[[n]][, mean_vars[j]]))), 
-                      log(as.numeric(unlist(test[[1]][, mean_vars[j]])))),TRUE)
+      mod2=try(t.test(log(as.numeric(unlist(test[[n]][, sum_vars[j]]))), 
+                      log(as.numeric(unlist(test[[1]][, sum_vars[j]])))),TRUE)
       
       if(isTRUE(class(mod2)=="try-error")) { next }
       
       else{
         
-      x <- t.test(log(as.numeric(unlist(test[[n]][, mean_vars[j]]))), 
-                  log(as.numeric(unlist(test[[1]][, mean_vars[j]]))))
+      x <- t.test(log(as.numeric(unlist(test[[n]][, sum_vars[j]]))), 
+                  log(as.numeric(unlist(test[[1]][, sum_vars[j]]))))
       
       t_test[nrow(t_test)+1,]<- broom::tidy(x)
       t_test[nrow(t_test), "test_food"] <- paste0(food_list[i,1 ], "_", gsub(" ", "", food_list[i,2]))
-      t_test[nrow(t_test), "test_nutrient"] <- mean_vars[j]
+      t_test[nrow(t_test), "test_nutrient"] <- sum_vars[j]
       
     }
     
@@ -241,8 +240,11 @@ names(t_test)[11:12] <- c("test_food","test_nutrient" )
 # Saving results form loop
 write(t_test, here::here( "inter-output", paste0("t_test_food_nutrient_", Sys.Date(), ".csv")))
 
-t_test %>% dplyr::filter(!is.na(estimate)) %>% 
+p.values <- t_test %>% dplyr::filter(!is.na(estimate)) %>% 
   select(p.value, test_food, test_nutrient) %>% 
   tidyr::pivot_wider(names_from = "test_nutrient",
               values_from = "p.value") %>% 
   filter(Mean.zinc_mg<0.05)
+
+# Saving results form loop
+write(p.values, here::here( "inter-output", paste0("p.values_food_nutrient_", Sys.Date(), ".csv")))
