@@ -118,6 +118,7 @@ level05 <- data_list$level05 %>%
 level05_30day <- 
   level05 %>% 
   mutate(Item_Code = as.numeric(Item_Code)) %>% 
+  # filter food items that were recorded over 30 days
   filter((Item_Code >100 & Item_Code<160) | 
            (Item_Code>169 &Item_Code<180) | 
            Item_Code %in% c(
