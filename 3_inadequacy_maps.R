@@ -37,8 +37,8 @@ processed_path <- "data/processed/"
 
 # read data
 
-food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
-hh_mn_intake <- readRDS("ind_nss2223_base_case.rds")
+food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
+hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
 # read in the fct
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
