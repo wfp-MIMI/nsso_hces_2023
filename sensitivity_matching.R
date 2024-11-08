@@ -127,7 +127,7 @@ df <- as.data.frame(matrix( ncol = 4))
 
 for(i in 1:length(test)){
 
-    df[i,1] <- unique(test[[i]][, c("test_food" )])
+  df[i,1] <- unique(test[[i]][, c("test_food" )])
   df[i,2] <- median(as.numeric(unlist(test[[i]][, names(test[[1]])[j]])))
   df[i,3] <- quantile(as.numeric(unlist(test[[i]][, names(test[[1]])[j]])), probs = 0.25)
   df[i,4] <- quantile(as.numeric(unlist(test[[i]][, names(test[[1]])[j]])), probs = 0.75)
@@ -151,3 +151,4 @@ df %>% mutate(p.value = ifelse(scenario %in% p.items, "YES", "NO")) %>%
   labs(y = names(test[[1]])[j]) +
   #  theme(axis.text = element_text(angle = 90)) 
     coord_flip() 
+

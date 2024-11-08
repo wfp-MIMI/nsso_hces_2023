@@ -212,11 +212,11 @@ hh_mn_intake <- food_consumption_daily_afe %>%
 
 
 # for lucia
-
-hh_2500 <- hh_mn_intake[1:2500,]
+# ~2% of the total size
+hh_5000 <- hh_mn_intake[sample(nrow(hh_mn_intake),5000),]
 
 hh_mn_intake_lucia <- food_consumption_daily_afe %>% 
-  filter(common_id %in% hh_2500$common_id) %>% 
+  filter(common_id %in% hh_5000$common_id) %>% 
   inner_join(ind_202223_fct , by=c("Item_Code" ="item_code" )) %>% 
   mutate(quantity_100g = Total_Consumption_Quantity/100,
          across(c(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg ),
