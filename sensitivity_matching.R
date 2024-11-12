@@ -120,7 +120,7 @@ write.csv(p.values, here::here( "inter-output", paste0("p.values_wilcox_food_nut
 ## Graph (2) ----------
 
 names(test[[1]])
-j = 7
+j = 3
 names(test[[1]])[j]
 
 df <- as.data.frame(matrix( ncol = 4))

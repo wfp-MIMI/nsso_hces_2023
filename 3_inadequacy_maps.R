@@ -156,10 +156,12 @@ maps_rice_base <- map_list(base_rice)
 maps_rice_current <- map_list(current_rice)
 maps_rice_wfp <- map_list(improved_rice)
 
+maps_rice_current[[1]]
+maps_rice_base[[1]]
 
 for(i in 1:8){
   map <- maps_rice_base[[i]]
-  tmap_save(map, paste0(figure_path,"base/", base_rice[[i]][1] , ".png"),
+  tmap_save(map, paste0(figure_path,"base/", base_rice[[i]][1] , ".svg"),
          width = 8, height = 9, units = "in")
 
 }
@@ -167,19 +169,37 @@ for(i in 1:8){
 
 for(i in 1:8){
   map <- maps_rice_current[[i]]
-  tmap_save(map, paste0(figure_path,"current_rice/", current_rice[[i]][1] , ".png"),
+  tmap_save(map, paste0(figure_path,"current_rice/", current_rice[[i]][1] , ".svg"),
             width = 8, height = 9, units = "in")
   
 }
 
 for(i in 1:8){
   map <- maps_rice_wfp[[i]]
-  tmap_save(map, paste0(figure_path,"improved_rice/", improved_rice[[i]][1] , ".png"),
+  tmap_save(map, paste0(figure_path,"improved_rice/", improved_rice[[i]][1] , ".svg"),
             width = 8, height = 9, units = "in")
   
 }
 
-
+tm_shape(ind_state) +
+  tm_fill(col = "grey77") +
+  tm_shape(nss_region_inad_sp) +
+  tm_fill(col = {{micronutrient}}, style = "cont", breaks = seq(0,100,by=10),
+          palette = (wesanderson::wes_palette("Zissou1Continuous")),
+          title = "Prevalence of inadequacy" ,
+          legend.is.portrait = FALSE
+  ) +
+  tm_layout(main.title = {{title}} , frame = F,
+            main.title.size = 0.8,
+            legend.outside.position = "bottom",
+            legend.outside.size = 0.35
+  ) +
+  # tm_borders(col = "black", lwd = 0.2) +
+  tm_shape(ind_state) +
+  # tm_text("State_Name", size = 0.6, remove.overlap = TRUE)+
+  # tm_fill(col = "state") +
+  tm_borders(col = "black", lwd = 1.5)+
+  tm_legend(show = T)
 
 ## wheat flour 
 
