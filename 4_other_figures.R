@@ -56,26 +56,9 @@ food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
 ind_nss_hdds <- read_xlsx(paste0(raw_path, "ind_nss2223_hdds.xlsx"),sheet = 1)
 
 
-## Functions ###################################################################
+## Descriptive data ############################################################
 
 
-
-
-
-
-x <- data_list$level05%>% 
-  filter(common_id =="HCES2022655561010131113011 101202  201")
-
-
-level01 %>% 
-  summarise(
-   n =  n(),
-    
-  )
-state_number <- level01 %>% 
-  group_by(state) %>% 
-  summarise(n(),
-            (n()/261746)*100)
 
 
 
@@ -93,7 +76,7 @@ hh_expenditure <-
   ungroup() %>% 
   mutate(per_capita_expenditure = total/hh_size) %>% 
   left_join(level01, by= 'common_id') %>%
-  group_by(sector) %>% 
+  # group_by(sector) %>% 
   mutate(res_quintile =
            case_when(
              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[2]]~
@@ -111,8 +94,47 @@ hh_expenditure <-
   left_join(level01 %>% select(common_id, state,multiplier ) %>% mutate(multiplier = as.numeric(multiplier)), by= 'common_id')
 
 
+state_qutintile <- hh_expenditure%>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  group_by(state) %>% 
+  summarise(
+    prop_lowest_quintile = round(survey_mean(res_quintile == "1", proportion = TRUE, na.rm = T),2)*100
+  )
 
-### proportion plots
+pds_totals <- data_list$level04 %>% 
+  left_join(hh_expenditure %>% select(common_id, sector,state), by= 'common_id') %>% 
+  mutate(multiplier = as.numeric(multiplier)) %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  group_by(state) %>% 
+  summarise(
+    pds_total = round(survey_mean(hh_used_ration_card_30days == "1", proportion = T, na.rm = TRUE),2)*100,
+    pds_rice = round(survey_mean(ration_card_item_rice  == "1", proportion = T, na.rm = TRUE),2)*100,
+    pds_wf = round(survey_mean(ration_card_item_wheat   == "1", proportion = T, na.rm = TRUE),2)*100
+  )
+
+# create df of summary state sep and pds use
+
+state_summary <- state_qutintile %>% 
+  select(state, prop_lowest_quintile) %>% 
+  left_join(pds_totals, by= "state") %>% 
+  select(state,prop_lowest_quintile,pds_total, pds_rice, pds_wf)
+
+# national level
+ data_list$level04 %>% 
+  left_join(hh_expenditure %>% select(common_id, sector, state), by= 'common_id') %>% 
+  mutate(multiplier = as.numeric(multiplier)) %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  # group_by(state) %>% 
+  summarise(
+    pds_total = round(survey_mean(hh_used_ration_card_30days == "1", proportion = T, na.rm = TRUE),2)*100,
+    pds_rice = round(survey_mean(ration_card_item_rice  == "1", proportion = T, na.rm = TRUE),2)*100,
+    pds_wf = round(survey_mean(ration_card_item_wheat   == "1", proportion = T, na.rm = TRUE),2)*100
+  )
+
+
+write.csv(state_summary, "state_summary.csv")
+
+ ### proportion plots ###########################################################
 
 food_group_cols <- colnames(ind_nss_hdds %>% select(-c(item_code,item_name)))
 
@@ -239,7 +261,7 @@ up_fg <- ggpubr::annotate_figure(up_fg, top = ggpubr::text_grob("Uttar Pradesh",
 tn_fg <- ggpubr::annotate_figure(tn_fg, top = ggpubr::text_grob("Tamil Nadu", face = "bold", size = 15))
 ch_fg <- ggpubr::annotate_figure(ch_fg, top = ggpubr::text_grob("Chhattisgarh", face = "bold", size = 15))
 mz_fg <- ggpubr::annotate_figure(mz_fg, top = ggpubr::text_grob("Mizoram", face = "bold", size = 15))
-nat_fg <- ggpubr::annotate_figure(nat_fg, top =ggpubr::text_grob("National", face = "bold", size = 15))
+nat_fg <- ggpubr::annotate_figure(nat_fg, top = ggpubr::text_grob("National", face = "bold", size = 15))
 
 
 

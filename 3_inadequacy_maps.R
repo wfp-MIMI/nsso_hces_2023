@@ -169,7 +169,7 @@ for(i in 1:8){
 
 for(i in 1:8){
   map <- maps_rice_current[[i]]
-  tmap_save(map, paste0(figure_path,"current_rice/", current_rice[[i]][1] , ".svg"),
+  tmap_save(map, paste0(figure_path,"current_rice/", current_rice[[i]][1] , ".png"),
             width = 8, height = 9, units = "in")
   
 }
@@ -310,6 +310,8 @@ intake_rice  <- food_consumption_daily_afe %>%
   ) 
 
 
+
+
 # have a joined df of reach and pc-consumption
 reach_intake <- 
   reach_rice %>% 
@@ -415,6 +417,27 @@ intake_wf  <- food_consumption_daily_afe %>%
     pds = survey_mean(pds, na.rm = T)
   )
 
+
+#national median for wheat
+x <- food_consumption_daily_afe %>% 
+  filter(Item_Code %in% c(107,62))%>% 
+  mutate(free = ifelse(Item_Code == 62, Total_Consumption_Quantity, 0),
+         pds = ifelse(Item_Code == 107, Total_Consumption_Quantity, 0)) %>% 
+  group_by(common_id) %>% 
+  summarise(free = sum(free),
+            pds = sum(pds)) %>%
+  mutate(combind = pds+free) %>% 
+  ungroup() %>% 
+  left_join(level01 %>% 
+              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  
+  summarise(
+    
+    pc_pds_or_free =  survey_mean(combind,na.rm = T),
+    free = survey_mean(free,na.rm = T),
+    pds = survey_mean(pds, na.rm = T)
+  )
 
 # join reach and pc-consumtption
 reach_intake_wf <- reach_wf %>% 

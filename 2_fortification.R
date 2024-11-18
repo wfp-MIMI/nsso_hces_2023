@@ -104,7 +104,7 @@ ind_fort_spec <-
     vitb6_mg_fort = c(0.2,0.2,0.2,0.2),
     folate_mcg_fort = c(10,10,10,10),
     vitb12_mcg_fort = c(0.1,0.1,0.1,0.1),
-    fe_mg_fort = c(3.525,3.525,3.525,3.525),
+    fe_mg_fort = c(3.525,3.525,1.7625,1.7625),
     zn_mg_fort = c(1.25,1.25,1.25,1.25),
     
     #wheat flour assumed 75-149g/day
@@ -114,9 +114,20 @@ ind_fort_spec <-
     niac_mg_fort_wfp = c(7,7,4,4),
     vitb6_mg_fort_wfp = c(0.6,0.6,0.2,0.2),
     folate_mcg_fort_wfp = c(130,130,260,260),
-    vitb12_mcg_fort_wfp = c(1,1,1,1),
-    fe_mg_fort_wfp = c(7,7,4,4),#wf = ferrous sulfate
+    vitb12_mcg_fort_wfp = c(1,1,2,2),
+    fe_mg_fort_wfp = c(7,7,4,4),#wf = NaFeEDPT
     zn_mg_fort_wfp = c(6,6, 5.5,5.5)
+    
+    # #wheat flour assumed 150-300g/day
+    # vita_rae_mcg_fort_wfp = c(150,150, 150,150),
+    # thia_mg_fort_wfp = c(0.5,0.5,0.3,0.3),
+    # ribo_mg_fort_wfp = c(NA,NA,0.2,0.2),
+    # niac_mg_fort_wfp = c(7,7,4,4),
+    # vitb6_mg_fort_wfp = c(0.6,0.6,0.2,0.2),
+    # folate_mcg_fort_wfp = c(130,130,130,130),
+    # vitb12_mcg_fort_wfp = c(1,1,1,1),
+    # fe_mg_fort_wfp = c(7,7,2,2),#wf = NaFeEDPT
+    # zn_mg_fort_wfp = c(6,6, 5.5,5.5)
     
   )
 
@@ -139,6 +150,7 @@ aggregated_inadequacy <- function(data,group){
       folate_inad = ifelse(folate_ug<180,1,0),
       vitb12_inad = ifelse(vitaminb12_in_mcg< 2, 1,0),
       thia_inad = ifelse(vitb1_mg<0.9, 1,0),
+      ribo_inad = ifelse(vitb2_mg<2,1, 0),
       niac_inad = ifelse(vitb3_mg<nin_ear$ear_value[nin_ear$nutrient == "niac_mg"], 1, 0 ),
       vitb6_inad = ifelse(vitb6_mg <nin_ear$ear_value[nin_ear$nutrient == "vitb6_mg"],1,0 ),
       vita_inad = ifelse(vita_mcg< nin_ear$ear_value[nin_ear$nutrient == "vita_rae_mcg"],1,0),
@@ -147,6 +159,7 @@ aggregated_inadequacy <- function(data,group){
       folate_inad_fort = ifelse(folate_mcg_fort < 180, 1,0),
       vitb12_inad_fort = ifelse(vitb12_mcg_fort<2,1,0),
       thia_inad_fort = ifelse(thia_mg_fort<0.9, 1,0),
+      ribo_inad_fort = ifelse(ribo_mg_fort<2,1, 0),
       niac_inad_fort = ifelse(niac_mg_fort<nin_ear$ear_value[nin_ear$nutrient == "niac_mg"], 1, 0 ),
       vitb6_inad_fort = ifelse(vitb6_mg_fort <nin_ear$ear_value[nin_ear$nutrient == "vitb6_mg"],1,0 ),
       vita_inad_fort = ifelse(vita_rae_mcg_fort< nin_ear$ear_value[nin_ear$nutrient == "vita_rae_mcg"],1,0),
@@ -155,6 +168,7 @@ aggregated_inadequacy <- function(data,group){
       folate_inad_fort_wfp = ifelse(folate_mcg_fort_wfp < 180, 1,0),
       vitb12_inad_fort_wfp = ifelse(vitb12_mcg_fort_wfp<2,1,0),
       thia_inad_fort_wfp = ifelse(thia_mg_fort_wfp<0.9, 1,0),
+      ribo_inad_fort_wfp = ifelse(ribo_mg_fort_wfp<2,1, 0),
       niac_inad_fort_wfp = ifelse(niac_mg_fort_wfp<nin_ear$ear_value[nin_ear$nutrient == "niac_mg"], 1, 0 ),
       vitb6_inad_fort_wfp = ifelse(vitb6_mg_fort_wfp <nin_ear$ear_value[nin_ear$nutrient == "vitb6_mg"],1,0 ),
       vita_inad_fort_wfp = ifelse(vita_rae_mcg_fort_wfp< nin_ear$ear_value[nin_ear$nutrient == "vita_rae_mcg"],1,0),
@@ -276,6 +290,7 @@ hh_mn_intake_fort_rice <- hh_mn_intake%>%
   mutate(folate_mcg_fort  = folate_ug+folate_mcg_fort ,
          fe_mg_fort = iron_mg+fe_mg_fort,
          thia_mg_fort = vitb1_mg+thia_mg_fort,
+         ribo_mg_fort = vitb2_mg+ribo_mg_fort,
          vitb12_mcg_fort = vitaminb12_in_mcg+vitb12_mcg_fort,
          niac_mg_fort = vitb3_mg + niac_mg_fort,
          vitb6_mg_fort = vitb6_mg+ vitb6_mg_fort, 
@@ -285,6 +300,7 @@ hh_mn_intake_fort_rice <- hh_mn_intake%>%
          folate_mcg_fort_wfp = folate_ug+folate_mcg_fort_wfp,
          fe_mg_fort_wfp = iron_mg+fe_mg_fort_wfp,
          thia_mg_fort_wfp = vitb1_mg+thia_mg_fort_wfp,
+         ribo_mg_fort_wfp = vitb2_mg+ribo_mg_fort_wfp,
          vitb12_mcg_fort_wfp = vitaminb12_in_mcg+vitb12_mcg_fort_wfp,
          niac_mg_fort_wfp = vitb3_mg + niac_mg_fort_wfp,
          vitb6_mg_fort_wfp = vitb6_mg+ vitb6_mg_fort_wfp, 
@@ -307,6 +323,7 @@ hh_mn_intake_fort_wf <- hh_mn_intake_fort_rice%>%
   mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_wf ,
          fe_mg_fort = fe_mg_fort+fe_mg_fort_wf,
          thia_mg_fort = thia_mg_fort+thia_mg_fort_wf,
+         ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_wf,
          vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_wf,
          niac_mg_fort = niac_mg_fort + niac_mg_fort_wf,
          vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_wf, 
@@ -318,6 +335,7 @@ hh_mn_intake_fort_wf <- hh_mn_intake_fort_rice%>%
          folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_wf,
          fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_wf,
          thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_wf,
+         ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_wf,
          vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_wf,
          niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_wf,
          vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_wf, 
@@ -403,6 +421,13 @@ all_inad_wf <- national_inad_wf %>%
   bind_rows(sector_inad_wf %>% rename(category = sector)%>% mutate(category = ifelse(category == 1, 
                                                                                      "Urban", "Rural"))) %>% 
   bind_rows(res_inad_wf %>% rename(category = res_quintile) )
+
+
+### just ribo flavin for wheat
+
+hh_mn_intake_fort_wf %>% 
+  select(common_id, vitb2_mg,ribo_mg_fort,ribo_mg_fort_wfp, ribo_mg_fort_wf, ribo_mg_fort_wfp_wf) %>% 
+  mean(ribo_mg_fort_wfp)
 
 ## Save #######################################################################
 
