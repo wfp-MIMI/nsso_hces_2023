@@ -51,12 +51,33 @@ nss_region_inad_rice <- readRDS("nss_region_inad_rice.rds")
 nss_region_inad_wf <- readRDS("nss_region_inad_wf.rds" )
 food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
 
+################################################################################
+# run for international borders
+source("shapefile_nss2223.R")
+
+jammu_kashmir_sp <- ind_state %>%
+  filter(State_Name %in% c("Jammu and Kashmir", "Ladakh", "Arunachal Pradesh")) %>% # Filter states
+  st_union() # Union the geometries into one
+
+plot(merged_geometry)
+
+international_ind_state <- ind_state %>%
+  filter(!(State_Name %in% c("Jammu and Kashmir", "Ladakh","Arunachal Pradesh")) )
+
+nss_region_shapefile_intrenational <- nss_region_shapefile_int %>% 
+  filter(!(nss_region %in% c(11,12,13, 122,371)))
+
+plot(nss_region_shapefile_intrenational$geometry)
+plot(international_ind_state$geometry) 
+plot(jammu_kashmir_sp, lty = 'dashed',add = TRUE)
 
 ################################################################################
 
 
 
-# map function 
+
+
+# map function geometry# map function 
 
 inadequacy_map <- function(micronutrient,
                            title = ""
@@ -65,6 +86,8 @@ inadequacy_map <- function(micronutrient,
   # creates a map of risk of inadequate intake for chosen mn and scenario
   # without a legend
   tm_shape(ind_state) +
+    tm_borders(col= 'white')+
+  tm_shape(international_ind_state) +
     tm_fill(col = "grey77") +
     tm_shape(nss_region_inad_sp) +
     tm_fill(col = {{micronutrient}}, style = "cont", breaks = seq(0,100,by=10),
@@ -78,11 +101,13 @@ inadequacy_map <- function(micronutrient,
               legend.outside.size = 0.35
     ) +
     # tm_borders(col = "black", lwd = 0.2) +
-    tm_shape(ind_state) +
+    tm_shape(international_ind_state) +
     # tm_text("State_Name", size = 0.6, remove.overlap = TRUE)+
     # tm_fill(col = "state") +
     tm_borders(col = "black", lwd = 1.5)+
-    tm_legend(show = F)
+    tm_legend(show = F) +
+    tm_shape(jammu_kashmir_sp)+
+    tm_borders(lty = "dashed")
 }
 
 
@@ -110,7 +135,11 @@ nss_region_inad_sp <- nss_region_inad_rice %>%
   left_join(nss_region_shapefile, by= 'nss_region') %>% 
   st_as_sf()
 
-
+#international borders
+nss_region_inad_sp <- nss_region_inad_rice %>% 
+  mutate(nss_region = as.numeric(nss_region)) %>% 
+  inner_join(nss_region_shapefile_intrenational, by= 'nss_region') %>% 
+  st_as_sf()
 
 
 
@@ -159,9 +188,11 @@ maps_rice_wfp <- map_list(improved_rice)
 maps_rice_current[[1]]
 maps_rice_base[[1]]
 
+figure_path <- "figures/int_borders/"
+
 for(i in 1:8){
   map <- maps_rice_base[[i]]
-  tmap_save(map, paste0(figure_path,"base/", base_rice[[i]][1] , ".svg"),
+  tmap_save(map, paste0(figure_path,"base/", base_rice[[i]][1] , ".png"),
          width = 8, height = 9, units = "in")
 
 }
@@ -176,7 +207,7 @@ for(i in 1:8){
 
 for(i in 1:8){
   map <- maps_rice_wfp[[i]]
-  tmap_save(map, paste0(figure_path,"improved_rice/", improved_rice[[i]][1] , ".svg"),
+  tmap_save(map, paste0(figure_path,"improved_rice/", improved_rice[[i]][1] , ".png"),
             width = 8, height = 9, units = "in")
   
 }

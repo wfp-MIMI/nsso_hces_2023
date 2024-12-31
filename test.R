@@ -239,27 +239,27 @@ contributions <- function(vehicle = "rice"){
   food_consumption_daily_afe %>% 
     select(
       common_id,Item_Code, Total_Consumption_Quantity) %>% 
-  filter(Item_Code %in% selected_item) %>% 
-  # mutate(Home_Produce_Quantity = as.numeric(Home_Produce_Quantity),
-  #        # remove any of the home produced quantity
-  #        Purchased_Quantity = Total_Consumption_Quantity - Home_Produce_Quantity) %>%
-  left_join(ind_fort_spec, by = "Item_Code") %>%
-  mutate(
-    across(
-      ends_with("_fort"),
-      ~.x*(Total_Consumption_Quantity/100)
-    ),
-    across(
-      ends_with("_wfp"),
-      ~.x*(Total_Consumption_Quantity/100)
+    filter(Item_Code %in% selected_item) %>% 
+    # mutate(Home_Produce_Quantity = as.numeric(Home_Produce_Quantity),
+    #        # remove any of the home produced quantity
+    #        Purchased_Quantity = Total_Consumption_Quantity - Home_Produce_Quantity) %>%
+    left_join(ind_fort_spec, by = "Item_Code") %>%
+    mutate(
+      across(
+        ends_with("_fort"),
+        ~.x*(Total_Consumption_Quantity/100)
+      ),
+      across(
+        ends_with("_wfp"),
+        ~.x*(Total_Consumption_Quantity/100)
+      )
+    ) %>%
+    group_by(common_id) %>%
+    summarise(
+      across(-c(Item_Code),
+             ~sum(., na.rm = TRUE))
     )
-  ) %>%
-  group_by(common_id) %>%
-  summarise(
-    across(-c(Item_Code),
-           ~sum(., na.rm = TRUE))
-  )
-
+  
   
 }
 
@@ -279,13 +279,13 @@ rice_conttributions_comerical <- food_consumption_daily_afe %>%
   
   select(
     common_id,Item_Code,Home_Produce_Quantity, Total_Consumption_Quantity) %>% 
- 
+  
   #filter only 'other rice' 
   filter(Item_Code %in% c(102)) %>% 
- mutate(Home_Produce_Quantity = 
-          ifelse(is.na(as.numeric(Home_Produce_Quantity)),0,as.numeric(Home_Produce_Quantity)),
-        # remove any of the home produced quantity
-        Purchased_Quantity = Total_Consumption_Quantity - Home_Produce_Quantity) %>%
+  mutate(Home_Produce_Quantity = 
+           ifelse(is.na(as.numeric(Home_Produce_Quantity)),0,as.numeric(Home_Produce_Quantity)),
+         # remove any of the home produced quantity
+         Purchased_Quantity = Total_Consumption_Quantity - Home_Produce_Quantity) %>%
   left_join(ind_fort_spec, by = "Item_Code") %>%
   mutate(
     across(
@@ -419,7 +419,7 @@ hh_mn_intake_fort_wf <- hh_mn_intake_fort_rice %>%
          vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_wf,
          zn_mg_fort = zn_mg_fort + zn_mg_fort_wf,
          
-
+         
          
          folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_wf,
          fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_wf,
@@ -588,7 +588,7 @@ hh_mn_intake %>%
   select(common_id, vitb2_mg) %>% 
   mutate(
     ribo_inad_fort_wfp = ifelse(vitb2_mg<2,1, 0)
-) %>%
+  ) %>%
   left_join(level01 %>%
               mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>%
   left_join(hh_expenditure %>% select(common_id, sep_quintile,res_quintile), by = "common_id") %>% 

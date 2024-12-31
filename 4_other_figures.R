@@ -90,7 +90,7 @@ hh_expenditure <-
              per_capita_expenditure<=quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[6]]~
                "5",
            )) %>% 
-  select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile) %>% 
+  select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile, fsu_serial_no ) %>% 
   left_join(level01 %>% select(common_id, state,multiplier ) %>% mutate(multiplier = as.numeric(multiplier)), by= 'common_id')
 
 
@@ -101,16 +101,33 @@ state_qutintile <- hh_expenditure%>%
     prop_lowest_quintile = round(survey_mean(res_quintile == "1", proportion = TRUE, na.rm = T),2)*100
   )
 
+
 pds_totals <- data_list$level04 %>% 
-  left_join(hh_expenditure %>% select(common_id, sector,state), by= 'common_id') %>% 
-  mutate(multiplier = as.numeric(multiplier)) %>% 
-  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
-  group_by(state) %>% 
+  left_join(hh_expenditure %>% select(common_id, sector,state,fsu_serial_no ), by= 'common_id') %>% 
+  mutate(multiplier = as.numeric(multiplier),
+         fsu_serial_no = as.numeric(fsu_serial_no)) %>% 
+  as_survey_design(ids = fsu_serial_no , weights = multiplier) %>%
+                     # multiplier) %>% 
+  group_by(sector) %>%
   summarise(
     pds_total = round(survey_mean(hh_used_ration_card_30days == "1", proportion = T, na.rm = TRUE),2)*100,
     pds_rice = round(survey_mean(ration_card_item_rice  == "1", proportion = T, na.rm = TRUE),2)*100,
-    pds_wf = round(survey_mean(ration_card_item_wheat   == "1", proportion = T, na.rm = TRUE),2)*100
+    pds_wf = round(survey_mean(ration_card_item_wheat   == "1", proportion = T, na.rm = TRUE),2)*100,
+    total = sum(ifelse(hh_used_ration_card_30days=="1",1,0))
   )
+
+data_list$level04 %>% 
+  left_join(hh_expenditure %>% select(common_id, sector,state,fsu_serial_no ), by= 'common_id') %>% 
+  group_by(sector) %>% 
+  summarise(total = sum(ifelse(hh_used_ration_card_30days=="1",1,0)))
+
+table(
+    x$hh_used_ration_card_30days
+    
+  )
+
+
+
 
 # create df of summary state sep and pds use
 
@@ -124,7 +141,7 @@ state_summary <- state_qutintile %>%
   left_join(hh_expenditure %>% select(common_id, sector, state), by= 'common_id') %>% 
   mutate(multiplier = as.numeric(multiplier)) %>% 
   as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
-  # group_by(state) %>% 
+  group_by(state) %>%
   summarise(
     pds_total = round(survey_mean(hh_used_ration_card_30days == "1", proportion = T, na.rm = TRUE),2)*100,
     pds_rice = round(survey_mean(ration_card_item_rice  == "1", proportion = T, na.rm = TRUE),2)*100,

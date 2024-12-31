@@ -24,7 +24,7 @@ names(data_list) <- tools::file_path_sans_ext(file_list)
 
 
 ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
-ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
+ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Workstream 2/Nutrition analysis/shapefiles/IND/ind_nss1112_adm2/ind_lss1819_adm2.shp")
 plot(ind_state$geometry)
 
 
@@ -49,6 +49,7 @@ plot(ind_state$geometry)
 
 # read in csv that converts code from shapefile to nss region codes
 nss2223_shp_dictionary <- read.csv("ind_codes_nss.csv")
+
 
 nss_region_shapefile <-   data_list$level01 %>%
   distinct(state,nss_region,district) %>%
@@ -81,10 +82,34 @@ plot(state$geometry, col = 'red')
 
 
 
+### international borders - splitting arunachal pradesh into two nss regions
+nss2223_shp_dictionary_int <- nss2223_shp_dictionary %>% 
+  # filter(state == 12) %>% 
+  mutate(
+    nss_region = case_when(!(DISTRICT_L %in% c(234,229,678,239,666)&
+                              #district codes belong
+                              state == 12)~ 122,
+                           TRUE ~ nss_region
+                           )
+  ) 
+
+nss_region_shapefile_int <-    data_list$level01 %>%
+  distinct(state,nss_region,district) %>%
+  mutate(district = as.numeric(paste0(state, district)),
+         state = as.numeric(state),
+         nss_region = as.numeric(nss_region)) %>%
+  full_join(nss2223_shp_dictionary_int, by = c("state", "nss_region","district")) %>%
+  mutate(DISTRICT_L = as.character(DISTRICT_L)) %>%
+  select(state,nss_region,district,State_LGD, DISTRICT_L) %>%
+  left_join(new_shapefile , by= c("State_LGD", "DISTRICT_L")) %>%
+  group_by(nss_region) %>%
+  summarise(geometry = sf::st_union(geometry))
+
+plot(nss_region_shapefile_int$geometry)
 
 # 
 #   
-# new_shapefile <- st_read("C:/Users/gabriel.battcock/Downloads/india_adm2_shp/DISTRICT_BOUNDARY.shp")
+new_shapefile <- st_read("C:/Users/gabriel.battcock/Downloads/india_adm2_shp/DISTRICT_BOUNDARY.shp")
 # # 
 # # ind_sahpefile_names <- new_shapefile %>% 
 # #   select(District, STATE,State_LGD, DISTRICT_L) %>% 
