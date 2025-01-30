@@ -1,0 +1,19 @@
+*.csv
+*.png
+*.jpg
+
+
+*.Rproj.user
+*.Rhistory
+*.RData*
+*.Ruserdata
+*.RDataTmp*
+.RData*
+.Rproj.user
+*.RDS
+*.svg
+
+
+# Not loading .xlsx from inter-output folder
+inter-output/*.xlsx
+inter-output/*.csv
