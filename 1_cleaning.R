@@ -42,6 +42,9 @@ level01 <- data_list$level01
 level02 <- data_list$level02 %>% 
   filter(common_id %in% level01$common_id)
 
+level02 %>% 
+  distinct(common_id)
+
 summary(factor(data_list$level01$sector))#1 = rural, 2 = urban
 summary(factor(level02$gender))
 
@@ -113,6 +116,12 @@ hh_afe %>%
 level05 <- data_list$level05 %>% 
   filter(common_id %in% level01$common_id)
 
+level05 %>% 
+  left_join(level01, by = "common_id") %>% 
+  group_by(sector) %>% 
+  distinct(common_id) %>% 
+  summarise(n())
+  
 
 # level 5 is 30 day recall  all reported in kg
 
@@ -294,13 +303,31 @@ hh_expenditure <-
   select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile,sep_quintile)
 
 
+# histogram of total consumption/expenditure
+hh_expenditure %>% 
+  ggplot(aes(x = total))+
+  geom_histogram()+
+  xlim(0,100000)
 
+hh_expenditure %>% 
+  group_by(sep_quintile) %>% 
+  summarise(
+    n = n()
+  )
+
+hh_expenditure %>% 
+  summarise(n())
+
+hh_expenditure %>% 
+  group_by(sector) %>% 
+  summarise(n())
+  
 ### Save data
 
 
-saveRDS(hh_expenditure, file = "data/processed/ind_nss2223_hh_expenditure.rds")
-saveRDS(food_consumption_daily_afe, file = "data/processed/ind_nss2223_food_consumption.rds")
-saveRDS(hh_mn_intake, file = "data/processed/ind_nss2223_base_case.rds")
+saveRDS(hh_expenditure, file = "ind_nss2223_hh_expenditure.rds")
+saveRDS(food_consumption_daily_afe, file = "ind_nss2223_food_consumption.rds")
+saveRDS(hh_mn_intake, file = "ind_nss2223_base_case.rds")
 
 
 rm(list = ls())

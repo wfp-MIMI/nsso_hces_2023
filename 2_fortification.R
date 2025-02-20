@@ -40,9 +40,9 @@ names(data_list) <- tools::file_path_sans_ext(file_list)
 level01 <- data_list$level01
 
 
-food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
-hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
-hh_expenditure <- readRDS(paste0(processed_path,"ind_nss2223_hh_expenditure.rds"))
+food_consumption_daily_afe <- readRDS(paste0("ind_nss2223_food_consumption.rds"))
+hh_mn_intake <- readRDS(paste0("ind_nss2223_base_case.rds"))
+hh_expenditure <- readRDS(paste0("ind_nss2223_hh_expenditure.rds"))
 # read in the fct
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
@@ -108,17 +108,30 @@ ind_fort_spec <-
     fe_mg_fort = c(3.525,3.525,3.525,1.7625,1.7625,1.7625),
     zn_mg_fort = c(1.25,1.25,1.25,1.25,1.25,1.25),
     
-    #wheat flour assumed 75-149g/day
+    # #wheat flour assumed 75-149g/day
+    # # for the wheat flour, multiply by expected losses
+    # vita_rae_mcg_fort_wfp = c(150,150, 150,300*0.79,300*0.79,300*0.79),
+    # thia_mg_fort_wfp = c(0.5,0.5,0.5,0.3*0.69,0.3*0.69,0.3*0.69),
+    # ribo_mg_fort_wfp = c(NA,NA,NA,0.2*0.85,0.2*0.85,0.2*0.85),
+    # niac_mg_fort_wfp = c(7,7,7,4*0.85,4*0.85,4*0.85),
+    # vitb6_mg_fort_wfp = c(0.6,0.6,0.6,0.2*0.83,0.2*0.83,0.2*0.83),
+    # folate_mcg_fort_wfp = c(130,130,130,260*0.83,260*0.83,260*0.83),
+    # vitb12_mcg_fort_wfp = c(1,1,1,2*0.85,2*0.85,2*0.85),
+    # fe_mg_fort_wfp = c(7,7,7,4,4,4),#wf = NaFeEDPT
+    # zn_mg_fort_wfp = c(6,6,6,5.5, 5.5,5.5)
+    # 
+    
+    #wheat flour assumed 150-300g/day
     # for the wheat flour, multiply by expected losses
-    vita_rae_mcg_fort_wfp = c(150,150, 150,300*0.79,300*0.79,300*0.79),
+    vita_rae_mcg_fort_wfp = c(150,150, 150,150*0.79,150*0.79,150*0.79),
     thia_mg_fort_wfp = c(0.5,0.5,0.5,0.3*0.69,0.3*0.69,0.3*0.69),
     ribo_mg_fort_wfp = c(NA,NA,NA,0.2*0.85,0.2*0.85,0.2*0.85),
     niac_mg_fort_wfp = c(7,7,7,4*0.85,4*0.85,4*0.85),
     vitb6_mg_fort_wfp = c(0.6,0.6,0.6,0.2*0.83,0.2*0.83,0.2*0.83),
     folate_mcg_fort_wfp = c(130,130,130,260*0.83,260*0.83,260*0.83),
-    vitb12_mcg_fort_wfp = c(1,1,1,2*0.85,2*0.85,2*0.85),
-    fe_mg_fort_wfp = c(7,7,7,4,4,4),#wf = NaFeEDPT
-    zn_mg_fort_wfp = c(6,6,6,5.5, 5.5,5.5)
+    vitb12_mcg_fort_wfp = c(1,1,1,1*0.85,1*0.85,1*0.85),
+    fe_mg_fort_wfp = c(7,7,7,2,2,2),#wf = NaFeEDPT
+    zn_mg_fort_wfp = c(6,6,6,4, 4,4)
 
   )
 
@@ -603,22 +616,22 @@ hh_expenditure <- hh_expenditure%>%
 
 ## Create df with aggregated data
 
-# rice pds
-nss_region_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`nss_region`)
-state_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`state`)
-sep_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`sep_quintile`) 
-sector_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`sector`) 
-res_quin_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`res_quintile`)
-national_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`national`)
-
-all_inad_rice <- national_inad %>% 
-  rename(category = national) %>% 
-  mutate(category = "national") %>% 
-  bind_rows(state_inad %>% rename(category = state)) %>% 
-  bind_rows(sep_inad %>% rename(category = sep_quintile) %>% 
-              mutate(category = paste("quntile", category))) %>% 
-  bind_rows(sector_inad %>% rename(category = sector)) %>% 
-  bind_rows(res_quin_inad %>% rename(category = res_quintile))
+# # rice pds
+# nss_region_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`nss_region`)
+# state_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`state`)
+# sep_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`sep_quintile`) 
+# sector_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`sector`) 
+# res_quin_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`res_quintile`)
+# national_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`national`)
+# 
+# all_inad_rice <- national_inad %>% 
+#   rename(category = national) %>% 
+#   mutate(category = "national") %>% 
+#   bind_rows(state_inad %>% rename(category = state)) %>% 
+#   bind_rows(sep_inad %>% rename(category = sep_quintile) %>% 
+#               mutate(category = paste("quntile", category))) %>% 
+#   bind_rows(sector_inad %>% rename(category = sector)) %>% 
+#   bind_rows(res_quin_inad %>% rename(category = res_quintile))
 
 ## wheat flour 
 
@@ -644,62 +657,62 @@ all_inad_wf <- national_inad_wf %>%
 
 
 
-nss_region_inad_com_rice<- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `nss_region`)
-national_inad_com_rice <- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `national`)
-state_inad_com_rice <- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `state`)
-sep_inad_com_rice <- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `sep_quintile`)
-res_inad_com_rice <- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `res_quintile`)
-sector_inad_com_rice <- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `sector`)
-
-all_inad_com_rice <- national_inad_com_rice %>%
-  rename(category = national) %>%
-  mutate(category = "national") %>%
-  bind_rows(state_inad_com_rice %>% rename(category = state)) %>%
-  bind_rows(sep_inad_com_rice %>% rename(category = sep_quintile) %>%
-              mutate(category = paste("quntile", category))) %>%
-  bind_rows(sector_inad_com_rice %>% rename(category = sector)%>% mutate(category = ifelse(category == 1,
-                                                                                     "Urban", "Rural"))) %>%
-  bind_rows(res_inad_com_rice %>% rename(category = res_quintile) )
+# nss_region_inad_com_rice<- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `nss_region`)
+# national_inad_com_rice <- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `national`)
+# state_inad_com_rice <- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `state`)
+# sep_inad_com_rice <- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `sep_quintile`)
+# res_inad_com_rice <- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `res_quintile`)
+# sector_inad_com_rice <- aggregated_inadequacy(hh_mn_intake_fort_rice_comm, `sector`)
+# 
+# all_inad_com_rice <- national_inad_com_rice %>%
+#   rename(category = national) %>%
+#   mutate(category = "national") %>%
+#   bind_rows(state_inad_com_rice %>% rename(category = state)) %>%
+#   bind_rows(sep_inad_com_rice %>% rename(category = sep_quintile) %>%
+#               mutate(category = paste("quntile", category))) %>%
+#   bind_rows(sector_inad_com_rice %>% rename(category = sector)%>% mutate(category = ifelse(category == 1,
+#                                                                                      "Urban", "Rural"))) %>%
+#   bind_rows(res_inad_com_rice %>% rename(category = res_quintile) )
 
 
 
 # wheat commercial 
 
-nss_region_inad_com_wf<- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `nss_region`)
-national_inad_com_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `national`)
-state_inad_com_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `state`)
-sep_inad_com_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `sep_quintile`)
-res_inad_com_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `res_quintile`)
-sector_inad_com_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `sector`)
-
-all_inad_com_wf <- national_inad_com_wf %>%
-  rename(category = national) %>%
-  mutate(category = "national") %>%
-  bind_rows(state_inad_com_wf %>% rename(category = state)) %>%
-  bind_rows(sep_inad_com_wf %>% rename(category = sep_quintile) %>%
-              mutate(category = paste("quntile", category))) %>%
-  bind_rows(sector_inad_com_wf %>% rename(category = sector)%>% mutate(category = ifelse(category == 1,
-                                                                                           "Urban", "Rural"))) %>%
-  bind_rows(res_inad_com_wf %>% rename(category = res_quintile) )
+# nss_region_inad_com_wf<- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `nss_region`)
+# national_inad_com_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `national`)
+# state_inad_com_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `state`)
+# sep_inad_com_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `sep_quintile`)
+# res_inad_com_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `res_quintile`)
+# sector_inad_com_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf_comm, `sector`)
+# 
+# all_inad_com_wf <- national_inad_com_wf %>%
+#   rename(category = national) %>%
+#   mutate(category = "national") %>%
+#   bind_rows(state_inad_com_wf %>% rename(category = state)) %>%
+#   bind_rows(sep_inad_com_wf %>% rename(category = sep_quintile) %>%
+#               mutate(category = paste("quntile", category))) %>%
+#   bind_rows(sector_inad_com_wf %>% rename(category = sector)%>% mutate(category = ifelse(category == 1,
+#                                                                                            "Urban", "Rural"))) %>%
+#   bind_rows(res_inad_com_wf %>% rename(category = res_quintile) )
 
 ### just ribo flavin for wheat
-hh_mn_intake %>% 
-  select(common_id, vitb2_mg) %>% 
-  mutate(
-    ribo_inad_fort_wfp = ifelse(vitb2_mg<2,1, 0)
-) %>%
-  left_join(level01 %>%
-              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>%
-  left_join(hh_expenditure %>% select(common_id, sep_quintile,res_quintile), by = "common_id") %>% 
-  mutate(national  = '1') %>% 
-  as_survey_design(ids = common_id, 
-                   # strata = sector, 
-                   weights = multiplier) %>%
-  srvyr::group_by(national) %>%
-  # srvyr::group_by(sep_quintile) %>%
-  summarise(
-    across(contains("inad"),~survey_mean(. == 1, proportion = T, na.rm = T)*100)
-  )
+# hh_mn_intake %>% 
+#   select(common_id, vitb2_mg) %>% 
+#   mutate(
+#     ribo_inad_fort_wfp = ifelse(vitb2_mg<2,1, 0)
+# ) %>%
+#   left_join(level01 %>%
+#               mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>%
+#   left_join(hh_expenditure %>% select(common_id, sep_quintile,res_quintile), by = "common_id") %>% 
+#   mutate(national  = '1') %>% 
+#   as_survey_design(ids = common_id, 
+#                    # strata = sector, 
+#                    weights = multiplier) %>%
+#   srvyr::group_by(national) %>%
+#   # srvyr::group_by(sep_quintile) %>%
+#   summarise(
+#     across(contains("inad"),~survey_mean(. == 1, proportion = T, na.rm = T)*100)
+#   )
 
 
 
@@ -708,20 +721,20 @@ hh_mn_intake %>%
 
 
 # summary csvs
-write.csv(all_inad_wf,"india_wf_inad.csv")
-write.csv(all_inad_rice,"india_rice_inad.csv" )
-write.csv(all_inad_com_rice, 'india_rice_com_inad.csv')
-write.csv(all_inad_com_wf, 'india_wf_com_inad.csv')
+write.csv(all_inad_wf,"india_wf_inad_v2.csv")
+# write.csv(all_inad_rice,"india_rice_inad.csv" )
+# write.csv(all_inad_com_rice, 'india_rice_com_inad.csv')
+# write.csv(all_inad_com_wf, 'india_wf_com_inad.csv')
 
 # r data for further analysis
-saveRDS(hh_mn_intake_fort_wf, "ind_fort_wf.rds")
-saveRDS(hh_mn_intake_fort_rice, "ind_fort_rice.rds")
-saveRDS(hh_mn_intake_fort_rice_comm, "ind_fort_rice_com.rds")
-saveRDS(hh_mn_intake_fort_wf_comm, "ind_fort_wf_com.rds")
-saveRDS(all_vehicles, "ind_fort_all.rds")
+saveRDS(hh_mn_intake_fort_wf, "ind_fort_wf_v2.rds")
+# saveRDS(hh_mn_intake_fort_rice, "ind_fort_rice.rds")
+# saveRDS(hh_mn_intake_fort_rice_comm, "ind_fort_rice_com.rds")
+# saveRDS(hh_mn_intake_fort_wf_comm, "ind_fort_wf_com.rds")
+# saveRDS(all_vehicles, "ind_fort_all.rds")
 
-saveRDS(nss_region_inad, "nss_region_inad_rice.rds" )
-saveRDS(nss_region_inad_wf, "nss_region_inad_wf.rds" )
-saveRDS(nss_region_inad_com_rice, "nss_region_inad_rice_com.rds" )
-saveRDS(nss_region_inad_com_wf, "nss_region_inad_wf_com.rds" )
+# saveRDS(nss_region_inad, "nss_region_inad_rice.rds" )
+saveRDS(nss_region_inad_wf, "nss_region_inad_wf_v2.rds" )
+# saveRDS(nss_region_inad_com_rice, "nss_region_inad_rice_com.rds" )
+# saveRDS(nss_region_inad_com_wf, "nss_region_inad_wf_com.rds" )
 # rm(list = ls())
