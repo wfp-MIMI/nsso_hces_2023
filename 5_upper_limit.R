@@ -10,6 +10,8 @@
 
 # package loading
 
+rm(list = ls())
+
 rq_packages <- c("tidyverse","dplyr","readr","srvyr","ggplot2", "tidyr",
                  "ggridges", "gt", "haven","foreign",
                  "tmap","sf","rmapshaper","readxl","hrbrthemes",
@@ -46,12 +48,12 @@ hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
 
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
 
-nss_region_inad_rice <- readRDS("nss_region_inad_rice.rds")
-nss_region_inad_wf <- readRDS("nss_region_inad_wf.rds" )
+# nss_region_inad_rice <- readRDS("nss_region_inad_rice.rds")
+# nss_region_inad_wf <- readRDS("nss_region_inad_wf.rds" )
 food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
 
 readRDS("ind_fort_wf.rds")
-hh_mn_intake_fort_wf <-  readRDS("ind_fort_wf.rds")
+hh_mn_intake_fort_wf <-  readRDS("ind_fort_wf_v2.rds")
 hh_mn_intake_fort_rice <- readRDS( "ind_fort_rice.rds")
 hh_mn_intake_fort_rice_comm <-   readRDS("ind_fort_rice_com.rds")
 hh_mn_intake_fort_wf_comm <-  readRDS("ind_fort_wf_com.rds")
@@ -101,12 +103,12 @@ nin_ear <- data.frame(
 )
 
 # PDS rice fortification
-base_excess_iron<- hh_mn_intake_fort_rice %>% 
+base_excess_iron<- hh_mn_intake_fort_wf %>% 
   filter(iron_mg>45)
 
 # look at overall energy distribution
 
-hh_mn_intake_fort_rice %>% 
+hh_mn_intake_fort_wf %>% 
   ggplot(aes(x = energy_kcal))+
   geom_histogram()
 
@@ -119,30 +121,58 @@ hh_mn_intake_fort_rice %>%
   )
 
 # excess energy
-excess_energy <- hh_mn_intake_fort_rice %>% 
-  filter(energy_kcal>3015)
+excess_energy <- hh_mn_intake_fort_wf %>% 
+  filter(energy_kcal>3120)
 
 # look at distribution of vehicle intake 
 
 all_vehicles %>% 
   mutate(total_vehicle_quantity = wf_pds_quantity+wf_comm_quantity+rice_comm_quantity +rice_pds_quantity) %>% 
-  summarise(mean = mean(total_vehicle_quantity),
+  summarise(mean = median(total_vehicle_quantity),
             sd =sd(total_vehicle_quantity),
-            plus_2sd = mean+2*sd)
+            plus_2sd = mean+1.96*sd)
 
 # excess vehicle consumption
 excess_vehicle <- all_vehicles %>% 
   mutate(total_vehicle_quantity = wf_pds_quantity+wf_comm_quantity+rice_comm_quantity +rice_pds_quantity) %>% 
-  filter(total_vehicle_quantity>461)
+  filter(total_vehicle_quantity>453)
 
 
 
 ## choose which to exclude
 # exclude <- excess_energy
 
-exclude <- excessive_vehicle
+
+# using the goldber cut off
 
 
+hh_mn_intake_fort_wf <- hh_mn_intake_fort_wf %>% 
+  mutate(
+    BMR = 14.818*55 +  486.6,
+    EI_BMR = energy_kcal/BMR
+    )
+
+pal <- 1.55
+SD_TEE <- 0.2
+
+goldberg_lower <- pal* exp(-2*SD_TEE)
+goldberg_upper <- pal* exp(2*SD_TEE)
+
+excess_energy <- hh_mn_intake_fort_wf %>% 
+  mutate(
+    classification = case_when(
+      EI_BMR < goldberg_lower ~ "Under-reporter",
+      EI_BMR > goldberg_upper ~ "Over-reporter",
+      TRUE ~ "Plausible"
+    )
+  ) %>% 
+  filter(classification == "Over-reporter")
+
+
+exclude <-  excess_vehicle %>% bind_rows(excess_energy) %>%
+  distinct(common_id)
+
+min(excess_energy$energy_kcal)
 
 
 hh_mn_intake_fort_rice %>% 
@@ -178,6 +208,8 @@ hh_mn_intake_fort_rice %>%
     mean_iron = mean(fe_mg_fort)        
     )
   
+
+x <- food_consumption_daily_afe %>% filter(common_id %in% rice$common_id)
 
 hh_mn_intake_fort_rice %>% 
   filter(fe_mg_fort_wfp>45 &

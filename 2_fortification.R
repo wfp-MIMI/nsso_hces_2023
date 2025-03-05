@@ -128,7 +128,7 @@ ind_fort_spec <-
     ribo_mg_fort_wfp = c(NA,NA,NA,0.2*0.85,0.2*0.85,0.2*0.85),
     niac_mg_fort_wfp = c(7,7,7,4*0.85,4*0.85,4*0.85),
     vitb6_mg_fort_wfp = c(0.6,0.6,0.6,0.2*0.83,0.2*0.83,0.2*0.83),
-    folate_mcg_fort_wfp = c(130,130,130,260*0.83,260*0.83,260*0.83),
+    folate_mcg_fort_wfp = c(130,130,130,130*0.83,130*0.83,130*0.83),
     vitb12_mcg_fort_wfp = c(1,1,1,1*0.85,1*0.85,1*0.85),
     fe_mg_fort_wfp = c(7,7,7,2,2,2),#wf = NaFeEDPT
     zn_mg_fort_wfp = c(6,6,6,4, 4,4)
@@ -405,7 +405,7 @@ hh_mn_intake_fort_rice <- hh_mn_intake%>%
   )
 
 # delete rice contributions df
-rm(rice_contributions)
+# rm(rice_contributions)
 
 
 ## Wheat flour 
@@ -438,7 +438,7 @@ hh_mn_intake_fort_wf <- hh_mn_intake_fort_rice %>%
          zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_wf
   )
 
-rm(wf_contributions)
+# rm(wf_contributions)
 
 # commercial contriubtions
 
