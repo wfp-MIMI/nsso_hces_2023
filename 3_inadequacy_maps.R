@@ -43,7 +43,7 @@ hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
 # ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
 
-ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
+# ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
 nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
 
@@ -604,6 +604,29 @@ intake_rice_state  <- food_consumption_daily_afe %>%
     pds = survey_mean(pds, na.rm = T)
   )
 
+#wheat flour 
+intake_wf_state  <- food_consumption_daily_afe %>% 
+  filter(Item_Code %in% c(107,62))%>% 
+  group_by(common_id) %>% 
+  mutate(free = ifelse(Item_Code == 62, Total_Consumption_Quantity, 0),
+         pds = ifelse(Item_Code == 107, Total_Consumption_Quantity, 0),
+         combind = sum(Total_Consumption_Quantity)) %>% 
+  summarise(free = sum(free),
+            pds = sum(pds),
+            combind = combind) %>% 
+  
+  slice(1) %>% 
+  ungroup() %>% 
+  left_join(level01 %>% 
+              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  srvyr::group_by(state) %>% 
+  summarise(
+    
+    pc_pds_or_free =  survey_mean(combind,na.rm = T),
+    free = survey_mean(free,na.rm = T),
+    pds = survey_mean(pds, na.rm = T)
+  )
 
 
 
