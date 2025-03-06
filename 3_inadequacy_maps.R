@@ -604,6 +604,29 @@ intake_rice_state  <- food_consumption_daily_afe %>%
     pds = survey_mean(pds, na.rm = T)
   )
 
+national_rice<- food_consumption_daily_afe %>% 
+  filter(Item_Code %in% c(101,61))%>% 
+  group_by(common_id) %>% 
+  mutate(free = ifelse(Item_Code == 61, Total_Consumption_Quantity, 0),
+         pds = ifelse(Item_Code == 101, Total_Consumption_Quantity, 0),
+         combind = sum(Total_Consumption_Quantity)) %>% 
+  summarise(free = sum(free),
+            pds = sum(pds),
+            combind = combind) %>% 
+  
+  slice(1) %>% 
+  ungroup() %>% 
+  left_join(level01 %>% 
+              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  
+  summarise(
+    
+    pc_pds_or_free =  survey_mean(combind,na.rm = T),
+    free = survey_mean(free,na.rm = T),
+    pds = survey_mean(pds, na.rm = T)
+  )
+
 #wheat flour 
 intake_wf_state  <- food_consumption_daily_afe %>% 
   filter(Item_Code %in% c(107,62))%>% 
@@ -629,6 +652,28 @@ intake_wf_state  <- food_consumption_daily_afe %>%
   )
 
 
+national_wf <- food_consumption_daily_afe %>% 
+  filter(Item_Code %in% c(107,62))%>% 
+  group_by(common_id) %>% 
+  mutate(free = ifelse(Item_Code == 62, Total_Consumption_Quantity, 0),
+         pds = ifelse(Item_Code == 107, Total_Consumption_Quantity, 0),
+         combind = sum(Total_Consumption_Quantity)) %>% 
+  summarise(free = sum(free),
+            pds = sum(pds),
+            combind = combind) %>% 
+  
+  slice(1) %>% 
+  ungroup() %>% 
+  left_join(level01 %>% 
+              mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
+  as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
+  # srvyr::group_by(state) %>% 
+  summarise(
+    
+    pc_pds_or_free =  survey_mean(combind,na.rm = T),
+    free = survey_mean(free,na.rm = T),
+    pds = survey_mean(pds, na.rm = T)
+  )
 
 reach_rice_state %>% 
   mutate(state = as.numeric(state)) %>% 
