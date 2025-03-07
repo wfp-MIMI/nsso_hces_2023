@@ -65,16 +65,11 @@ wheat <- india_wf_inad %>%
 both_vehicles <-  rice %>% 
   left_join(wheat, by= 'category') 
 
-
-# Function to plot reduction of prevalence for a given micronutrient
 plot_fortification_reduction <- function(df, micronutrient) {
-  
-  # Select only relevant columns (base case + scenarios related to chosen micronutrient)
-  df_long <- df%>%
-    select(category, starts_with(micronutrient)) %>% 
-    # df_long <- df%>% %>%
+  df_long <- df %>%
+    select(category, starts_with(micronutrient)) %>%
     pivot_longer(
-      cols = starts_with(paste0(micronutrient, "_")), 
+      cols = starts_with(paste0(micronutrient, "_")),
       names_to = "scenario",
       values_to = "prevalence"
     ) %>%
@@ -89,108 +84,88 @@ plot_fortification_reduction <- function(df, micronutrient) {
         grepl("int", scenario) ~ "International",
         TRUE ~ "Base Case"
       ),
-      scenario_label = paste(standard, vehicle, sep = " - ")  # Now grouped by standard first
-    ) 
-    
+      scenario_label = paste(standard, vehicle, sep = " - ")
+    )
   
-  # Extract base case prevalence for each category
   base_case <- df_long %>%
     filter(standard == "Base Case") %>%
     select(category, base_prevalence = prevalence)
   
-  # Join to compute reductions
   df_long <- df_long %>%
     left_join(base_case, by = "category") %>%
     mutate(
       reduction = base_prevalence - prevalence,
-      reduction_pct = round((reduction / base_prevalence) * 100, 0)  # Calculate % reduction
+      reduction_pct = round((reduction / base_prevalence) * 100, 0)
     )
   
-  # Order factor levels dynamically so Indian & International stay grouped
   unique_scenarios <- unique(df_long$scenario_label)
   df_long$scenario_label <- factor(df_long$scenario_label, levels = sort(unique_scenarios))
   
-  # Define dodge width dynamically based on number of scenarios
   num_scenarios <- length(unique_scenarios)
   dodge_width <- 0.95
-  offset_step <- dodge_width / (num_scenarios + 1)  # Dynamic offset calculation
+  offset_step <- dodge_width / (num_scenarios + 1)
   
-  # Define custom colors (Rice in red shades, Wheat in blue shades)
   custom_colors <- c(
-    "Indian - Rice" = "#27AE60",  # Red shade
-    "Indian - Wheat and rice" = "#3498DB",  # Blue shade
-    "International - Rice" = "#145A32",  # Darker Red
-    "International - Wheat and rice" = "#2C3E50"   # Darker Blue
+    "Indian - Rice" = "#27AE60",
+    "Indian - Wheat and rice" = "#3498DB",
+    "International - Rice" = "#145A32",
+    "International - Wheat and rice" = "#2C3E50"
   )
   
-  # Dynamically assign colors to new scenarios if needed
   scenario_colors <- setNames(
-    custom_colors[unique_scenarios], 
+    custom_colors[unique_scenarios],
     unique_scenarios
   )
   
-  
   df_long$category <- factor(df_long$category, levels = c("National", setdiff(unique(df_long$category), "National")))
   
-  
-  # Plot with correctly aligned elements
   ggplot(df_long, aes(x = category, y = prevalence, fill = scenario_label)) +
-    
-    # Bar chart with position dodge
     geom_bar(stat = "identity", position = position_dodge(width = dodge_width)) +
-    ylim(0,100)+
-    # White text for overall prevalence at the bottom of bars
+    ylim(0, 100) +
     geom_text(
-      aes(label = paste0(round(prevalence,0), "%"), y =  1),  # Position slightly above bottom
-      color = "white", 
+      aes(label = paste0(round(prevalence, 0), "%"), y = 1),
+      color = "white",
       size = 3.8,
       position = position_dodge(width = dodge_width),
-      vjust = 0  # Align text above the bottom of bars
+      vjust = 0
     ) +
-    # Add arrows for reduction (correctly aligned dynamically)
     geom_segment(
+      data = df_long %>% filter(reduction_pct > 0),  # Exclude zero reductions
       aes(
         x = as.numeric(as.factor(category)) + (as.numeric(as.factor(scenario_label)) - (num_scenarios / 2 + 0.5)) * offset_step,
         xend = as.numeric(as.factor(category)) + (as.numeric(as.factor(scenario_label)) - (num_scenarios / 2 + 0.5)) * offset_step,
-        y = base_prevalence, 
+        y = base_prevalence,
         yend = prevalence
       ),
       arrow = arrow(length = unit(0.2, "cm")),
       color = "black"
     ) +
-    
-    # Add text labels for reduction percentage and aligning dynamically
     geom_text(
-      data = df_long,  #
+      data = df_long %>% filter(reduction_pct > 0),  # Exclude zero reductions
       aes(
         x = as.numeric(as.factor(category)) + (as.numeric(as.factor(scenario_label)) - (num_scenarios / 2 + 0.5)) * offset_step,
-        y = base_prevalence +2.5, 
+        y = base_prevalence + 2.5,
         label = paste0(reduction_pct, "%")
       ),
       size = 3.9, color = "black"
     ) +
-    
-    # Labels and theme adjustments
     labs(
       title = paste(
-        # "Reduction of Risk Prevalence for",
-                    case_when(micronutrient == "vitb12" ~ "Vitamin B12",
-                              micronutrient == "folate" ~ "Folate",
-                              micronutrient == 'fe' ~ "Iron")
-                    # "by Fortification Scenario"
-                    ),
+        case_when(
+          micronutrient == "vitb12" ~ "Vitamin B12",
+          micronutrient == "folate" ~ "Folate",
+          micronutrient == 'fe' ~ "Iron"
+        )
+      ),
       x = "", y = "Risk of inadequate intake (%)",
       fill = "Fortification Scenario"
     ) +
     theme_minimal() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           axis.text = element_text(size = 14)) +
-    # Ensure "National" is bold
-    # scale_x_discrete(labels = function(x) ifelse(x == "National", "*National*", x)) +
-    
-    # Apply dynamic color palette
-    scale_fill_manual(values = scenario_colors)+ theme_ipsum(axis_title_size = 15.5)
+    scale_fill_manual(values = scenario_colors) + theme_ipsum(axis_title_size = 15.5)
 }
+
 
 # Example usage
 plot_fortification_reduction(rice, "fe")
@@ -252,5 +227,7 @@ final_plot <- ggpubr::ggarrange(
   
 )
 
-ggpubr::annotate_figure(final_plot, top = ggpubr::text_grob("PDS-distributed wheat and rice", 
+ ggpubr::annotate_figure(final_plot, top = ggpubr::text_grob("PDS-distributed wheat and rice", 
                                                             color = "black", face = "bold", size = 18))
+
+ggsave("plot.svg", plot = p2, device = "svg",width = 2000, height = 900, units = "px")
