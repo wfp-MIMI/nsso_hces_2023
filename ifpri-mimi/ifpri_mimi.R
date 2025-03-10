@@ -48,7 +48,7 @@ ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Pr
 
 # IFPRI data
 
-gdqs_nss <- read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Workstream 2/Policy research/India/MIMI-IFPRI GDQS Collaboration/GDQS_data_IFPRI.dta")
+gdqs_nss <- read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Countries/India/MIMI-IFPRI GDQS Collaboration/GDQS_data_IFPRI.dta")
 
 
 
@@ -98,21 +98,74 @@ nin_ear <- data.frame(
 
 
 # ------------------------------------------------------------------------------
-
+# create a new id that is unique
 gdqs_nss <- gdqs_nss %>% 
   mutate(new_id = 
-           paste0(svy_name,year,fsu_sno,sector,state,nss_region,district,stratum,substratum,
-                 panel," ", subsample,fod_sub_reg,sample_su_no," ", sec_stage_strat,common_id))
+           paste0(fsu_sno,sector,state,nss_region,district,sec_stage_strat,
+                  # stratum,
+                  # substratum,
+                 common_id))
+unique(gdqs_nss$new_id)
 
 
-gdqs_nss %>% 
-  left_join(
-    level01, by = c(
-      "svy_name" = "survey_name","year" = "year","fsu_sno" = "fsu_serial_no" ,
-       "sector" = "sector","state" = "state","nss_region" = "nss_region","district" = "district","stratum" = "stratum",
-      "substratum" = "sub_stratum_no","panel" = "panel", "subsample" = "sub_sample"
-      # "fod_sub_reg" = "fod_sub_region","sample_su_no" = "sample_su_no","sec_stage_strat" = "fod_sub_region",
-      # "common_id" = "sample_hhld_no ")
-      # 
-    ))
+
+#create unique id that matches with IFPRI data frame 
+level01_new <- level01 %>% 
+  mutate(
+    across(c(fsu_serial_no,sector, state ,nss_region,district,sample_stage_stratum_no,sample_hhld_no),
+    as.numeric
+  )) %>% 
+  mutate(new_id = 
+           paste0(
+             fsu_serial_no,sector,state,nss_region,district,sample_stage_stratum_no,sample_hhld_no
+           )) %>% 
+  select(new_id, common_id)
+
+unique(level01_new$new_id)
+
+# check that they all match 
+sum(gdqs_nss$new_id %in% level01_new$new_id == TRUE)
+sum(level01_new$new_id %in% gdqs_nss$new_id == TRUE)
+
+
+# rename some columns 
+hh_mn_intake <- hh_mn_intake %>% 
+  rename(
+    vitb12_mcg = vitaminb12_in_mcg, 
+    vita_rae_mcg = vita_mcg,
+    folate_mcg = folate_ug
+  )
+
   
+#create final dataframe
+
+
+final_gdqs_mimi <- gdqs_nss %>% 
+  #filter out common id (sample hh no) so merge will work
+  select(-common_id) %>% 
+  inner_join(level01_new, by = "new_id") %>% 
+  left_join(hh_mn_intake, by = "common_id") %>% 
+  select(-common_id) %>%
+  left_join(gdqs_nss %>% select(new_id, common_id), by = 'new_id') %>%
+  relocate(common_id, .before = sector)
+
+
+## test that the data is in working order and looks to have the correct distributions
+
+for (item in colnames(final_gdqs_mimi)[71:80]) {
+  print(item)  # Print column name to check
+  
+  p <- ggplot(final_gdqs_mimi, aes(x = .data[[item]])) +  # Use .data[[item]]
+    geom_histogram(fill = "lightblue", color = "black", bins = 30) +
+    ggtitle(paste("Histogram of", item)) +
+    theme_minimal()
+  
+  print(p)  # Ensure the plot is displayed inside the loop
+}
+
+
+# save the file
+
+haven::write_dta(final_gdqs_mimi,paste0(processed_path, "GDQS_data_IFPRI_MIMI.dta" ))
+
+
