@@ -111,10 +111,11 @@ hh_afe %>%
   geom_abline(slope = 1, intercept = 0, color = 'red')
 
 
+
 # FOOD CONSUMPTION #############################################################
 
-level05 <- data_list$level05 %>% 
-  filter(common_id %in% level01$common_id)
+level05 <- data_list$level05 %>%
+   filter(common_id %in% level01$common_id)
 
 level05 %>% 
   left_join(level01, by = "common_id") %>% 
@@ -124,6 +125,7 @@ level05 %>%
   
 
 # level 5 is 30 day recall  all reported in kg
+unique(level05$common_id)
 
 level05_30day <- 
   level05 %>% 

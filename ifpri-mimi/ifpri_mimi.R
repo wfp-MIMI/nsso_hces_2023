@@ -43,6 +43,9 @@ level01 <- data_list$level01
 food_consumption_daily_afe <- readRDS(paste0("ind_nss2223_food_consumption.rds"))
 hh_mn_intake <- readRDS(paste0("ind_nss2223_base_case.rds"))
 hh_expenditure <- readRDS(paste0("ind_nss2223_hh_expenditure.rds"))
+
+readRDS("ind_fort_r")
+
 # read in the fct
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
@@ -50,7 +53,16 @@ ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Pr
 
 gdqs_nss <- read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Countries/India/MIMI-IFPRI GDQS Collaboration/GDQS_data_IFPRI.dta")
 
+# check the households that don't exist in our dataset
+unique(gdqs_nss$fsu_sno)
+y <- level05 %>% left_join(level01_new, by= "common_id")
+x <- gdqs_nss[!(gdqs_nss$new_id %in% y$new_id),]$new_id
+z <- level01_new %>% left_join(level05, by= "common_id")
+w <- z %>% filter(new_id %in% x)
 
+
+# read 
+level05_new <- haven::read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Documents/Unit level data of HCES 2022-23 round/LEVEL - 05 ( Sec 5 & 6).dta")
 
 ################################################################################
 # set ear cut point and UL values
@@ -106,8 +118,16 @@ gdqs_nss <- gdqs_nss %>%
                   # substratum,
                  common_id))
 unique(gdqs_nss$new_id)
-
-
+#  
+# unique(t$new_id)
+# t <- level05_new %>% 
+#   mutate(
+#     across(c(fsu,sector, state ,nss_region,district,b1q1pt11 ,b1q1pt12 ),
+#            as.numeric
+#     )) %>% 
+#   mutate(new_id =paste0(fsu,sector, state ,nss_region,district,b1q1pt11 ,b1q1pt12 ))
+# 
+# s <- t %>% filter(new_id %in% x)
 
 #create unique id that matches with IFPRI data frame 
 level01_new <- level01 %>% 
@@ -138,7 +158,6 @@ hh_mn_intake <- hh_mn_intake %>%
 
   
 #create final dataframe
-
 
 final_gdqs_mimi <- gdqs_nss %>% 
   #filter out common id (sample hh no) so merge will work

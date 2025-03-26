@@ -43,7 +43,7 @@ hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
 # ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
 
-# ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
+ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Workstream 2/Nutrition analysis/shapefiles/IND/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
 nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
 

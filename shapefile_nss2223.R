@@ -47,11 +47,6 @@ hh_expenditure <- readRDS(paste0(processed_path,"ind_nss2223_hh_expenditure.rds"
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx",sheet =1)
 ind_202223_fct_amino_acids <- read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx",sheet =2)
 
-# molly's database
-
-mol_db <- read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/Ileal IAA digestibility and DIAAS of world foods_Molly Muleya_November 2021_RS_14102024.xlsx",
-                    sheet ='Total and digestible IAA',
-                    skip =1)
 
 ################################################################################
 
@@ -143,13 +138,13 @@ mean_aa_intake <- function(...){
   return(x)
 }
 
-sep_quintile_intake_aa <- mean_aa_intake(sep_quintile) %>% 
+sep_quintile_intake_aa <- median_aa_intake(sep_quintile) %>% 
   filter(!is.na(sep_quintile))
 
-res_quintile_intake_aa <- mean_aa_intake(res_quintile)  %>% 
+res_quintile_intake_aa <- median_aa_intake(res_quintile)  %>% 
   filter(!is.na(res_quintile)) %>% 
   bind_rows(
-    mean_aa_intake(sector) %>% 
+    median_aa_intake(sector) %>% 
       mutate(res_quintile = 0)
   ) %>% mutate(res_quintile = case_when(
     res_quintile == 0 ~ "National",

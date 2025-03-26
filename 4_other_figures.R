@@ -45,7 +45,7 @@ hh_mn_intake <- readRDS("ind_nss2223_base_case.rds")
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
 
-ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
+ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Workstream 2/Nutrition analysis/shapefiles/IND/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
 nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
 
@@ -139,7 +139,7 @@ state_summary <- state_qutintile %>%
 
 # national level
  data_list$level04 %>% 
-  left_join(hh_expenditure %>% select(common_id, sector, state), by= 'common_id') %>% 
+    left_join(hh_expenditure %>% select(common_id, sector, state), by= 'common_id') %>% 
   mutate(multiplier = as.numeric(multiplier)) %>% 
   as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
   group_by(state) %>%
@@ -222,7 +222,7 @@ state_foodggroup_average <-  food_group_full %>%
 
 
 # create list of micronutrient names
-micronutrient <- c(colnames(national_foodgroup_average[3:11]))
+micronutrient <- c(colnames(state_foodggroup_average[3:12]))
 
 
 
@@ -264,7 +264,7 @@ for(item in micronutrient){
 }
   return(mn_fg_plots)
 }
-state_prop_boxes("08")
+state_prop_boxes("32")
 
 
 
@@ -275,6 +275,8 @@ up_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("09"), common.legend = T)
 tn_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("23"), common.legend = T)
 ch_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("22"), common.legend = T)
 mz_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("17"), common.legend = T)
+kl_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("32"), common.legend = T)
+
 
 raj_fg <- ggpubr::annotate_figure(raj_fg, top = ggpubr::text_grob("Rajasthan", face = "bold", size = 15))
 up_fg <- ggpubr::annotate_figure(up_fg, top = ggpubr::text_grob("Uttar Pradesh", face = "bold", size = 15))
@@ -282,7 +284,7 @@ tn_fg <- ggpubr::annotate_figure(tn_fg, top = ggpubr::text_grob("Tamil Nadu", fa
 ch_fg <- ggpubr::annotate_figure(ch_fg, top = ggpubr::text_grob("Chhattisgarh", face = "bold", size = 15))
 mz_fg <- ggpubr::annotate_figure(mz_fg, top = ggpubr::text_grob("Mizoram", face = "bold", size = 15))
 nat_fg <- ggpubr::annotate_figure(nat_fg, top = ggpubr::text_grob("National", face = "bold", size = 15))
-
+kl_fg <- ggpubr::annotate_figure(kl_fg, top = ggpubr::text_grob("Kerela", face = "bold", size = 15))
 
 
 ggsave(paste0(figure_path,"rj_fg.png"), raj_fg, height = 8, width = 6)

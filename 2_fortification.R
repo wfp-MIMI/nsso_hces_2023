@@ -312,69 +312,69 @@ rice_conttributions_comerical <- food_consumption_daily_afe %>%
            ~sum(., na.rm = TRUE))
   )
 
-
-
-wf_contributions <-  food_consumption_daily_afe %>% 
-  select(
-    common_id,Item_Code, Total_Consumption_Quantity) %>% 
-  filter(Item_Code %in%  c(062,107)) %>% 
-  # mutate(Home_Produce_Quantity = as.numeric(Home_Produce_Quantity),
-  #        # remove any of the home produced quantity
-  #        Purchased_Quantity = Total_Consumption_Quantity - Home_Produce_Quantity) %>%
-  left_join(ind_fort_spec, by = "Item_Code") %>%
-  mutate(
-    across(
-      ends_with("_fort"),
-      ~.x*(Total_Consumption_Quantity/100),
-      .names = "{.col}_wf"
-    ),
-    across(
-      ends_with("_wfp"),
-      ~.x*(Total_Consumption_Quantity/100),
-      .names = "{.col}_wf"
-    )
-  ) %>%
-  group_by(common_id) %>%
-  select(common_id,Item_Code, Total_Consumption_Quantity, ends_with("_wf")) %>% 
-  summarise(
-    across(-c(Item_Code),
-           ~sum(., na.rm = TRUE))
-  )
+# 
+# 
+# wf_contributions <-  food_consumption_daily_afe %>% 
+#   select(
+#     common_id,Item_Code, Total_Consumption_Quantity) %>% 
+#   filter(Item_Code %in%  c(062,107)) %>% 
+#   # mutate(Home_Produce_Quantity = as.numeric(Home_Produce_Quantity),
+#   #        # remove any of the home produced quantity
+#   #        Purchased_Quantity = Total_Consumption_Quantity - Home_Produce_Quantity) %>%
+#   left_join(ind_fort_spec, by = "Item_Code") %>%
+#   mutate(
+#     across(
+#       ends_with("_fort"),
+#       ~.x*(Total_Consumption_Quantity/100),
+#       .names = "{.col}_wf"
+#     ),
+#     across(
+#       ends_with("_wfp"),
+#       ~.x*(Total_Consumption_Quantity/100),
+#       .names = "{.col}_wf"
+#     )
+#   ) %>%
+#   group_by(common_id) %>%
+#   select(common_id,Item_Code, Total_Consumption_Quantity, ends_with("_wf")) %>% 
+#   summarise(
+#     across(-c(Item_Code),
+#            ~sum(., na.rm = TRUE))
+#   )
 
 
 # wheat flour commercially purchased
-wf_conttributions_comerical <- food_consumption_daily_afe %>% 
-  
-  select(
-    common_id,Item_Code,Home_Produce_Quantity, Total_Consumption_Quantity, source) %>% 
-  mutate(source = as.numeric(source)) %>% 
-  #filter only 'other wheat ' 
-  filter(Item_Code %in% c(108) &
-           #source is purchased,  or home or purchsed only
-           source %in% c(1,3)) %>% 
-  mutate(Home_Produce_Quantity = 
-           ifelse(is.na(as.numeric(Home_Produce_Quantity)),0,as.numeric(Home_Produce_Quantity)),
-         # remove any of the home produced quantity
-         Purchased_Quantity = (Total_Consumption_Quantity - Home_Produce_Quantity) )%>%
-  left_join(ind_fort_spec, by = "Item_Code") %>% 
-  mutate(
-    across(
-      ends_with("_fort"),
-      ~.x*(Purchased_Quantity/100),
-      .names = "{.col}_2"
-    ),
-    across(
-      ends_with("_wfp"),
-      ~.x*(Purchased_Quantity/100),
-      .names = "{.col}_2"
-    )
-  ) %>%
-  select(common_id,Item_Code, Purchased_Quantity, ends_with("_2")) %>% 
-  group_by(common_id) %>%
-  summarise(
-    across(-c(Item_Code),
-           ~sum(., na.rm = TRUE))
-  )
+# wf_conttributions_comerical <- food_consumption_daily_afe %>% 
+#   
+#   select(
+#     common_id,Item_Code,Home_Produce_Quantity, Total_Consumption_Quantity, source) %>% 
+#   mutate(source = as.numeric(source)) %>% 
+#   #filter only 'other wheat ' 
+#   filter(Item_Code %in% c(108) &
+#            #source is purchased,  or home or purchsed only
+#            source %in% c(1,3)) %>% 
+#   mutate(Home_Produce_Quantity = 
+#            ifelse(is.na(as.numeric(Home_Produce_Quantity)),0,as.numeric(Home_Produce_Quantity)),
+#          # remove any of the home produced quantity
+#          Purchased_Quantity = (Total_Consumption_Quantity - Home_Produce_Quantity) )%>%
+#   left_join(ind_fort_spec, by = "Item_Code") %>% 
+#   mutate(
+#     across(
+#       ends_with("_fort"),
+#       ~.x*(Purchased_Quantity/100),
+#       .names = "{.col}_2"
+#     ),
+#     across(
+#       ends_with("_wfp"),
+#       ~.x*(Purchased_Quantity/100),
+#       .names = "{.col}_2"
+#     )
+#   ) %>%
+#   select(common_id,Item_Code, Purchased_Quantity, ends_with("_2")) %>% 
+#   group_by(common_id) %>%
+#   summarise(
+#     across(-c(Item_Code),
+#            ~sum(., na.rm = TRUE))
+#   )
 
 
 
@@ -409,204 +409,204 @@ hh_mn_intake_fort_rice <- hh_mn_intake%>%
 
 
 ## Wheat flour 
-
-hh_mn_intake_fort_wf <- hh_mn_intake_fort_rice %>% 
-  # take the fortification scenarios of rice and add on top 
-  left_join(wf_contributions, by= 'common_id') %>% 
-  mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
-  
-  mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_wf ,
-         fe_mg_fort = fe_mg_fort+fe_mg_fort_wf,
-         thia_mg_fort = thia_mg_fort+thia_mg_fort_wf,
-         ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_wf,
-         vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_wf,
-         niac_mg_fort = niac_mg_fort + niac_mg_fort_wf,
-         vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_wf, 
-         vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_wf,
-         zn_mg_fort = zn_mg_fort + zn_mg_fort_wf,
-         
-
-         
-         folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_wf,
-         fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_wf,
-         thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_wf,
-         ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_wf,
-         vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_wf,
-         niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_wf,
-         vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_wf, 
-         vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_wf,
-         zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_wf
-  )
+# 
+# hh_mn_intake_fort_wf <- hh_mn_intake_fort_rice %>% 
+#   # take the fortification scenarios of rice and add on top 
+#   left_join(wf_contributions, by= 'common_id') %>% 
+#   mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
+#   
+#   mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_wf ,
+#          fe_mg_fort = fe_mg_fort+fe_mg_fort_wf,
+#          thia_mg_fort = thia_mg_fort+thia_mg_fort_wf,
+#          ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_wf,
+#          vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_wf,
+#          niac_mg_fort = niac_mg_fort + niac_mg_fort_wf,
+#          vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_wf, 
+#          vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_wf,
+#          zn_mg_fort = zn_mg_fort + zn_mg_fort_wf,
+#          
+# 
+#          
+#          folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_wf,
+#          fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_wf,
+#          thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_wf,
+#          ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_wf,
+#          vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_wf,
+#          niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_wf,
+#          vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_wf, 
+#          vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_wf,
+#          zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_wf
+#   )
 
 # rm(wf_contributions)
 
 # commercial contriubtions
 
-
-
-hh_mn_intake_fort_rice_comm <- hh_mn_intake_fort_rice%>% 
-  # take the fortification scenarios of rice and add on top 
-  left_join(rice_conttributions_comerical, by= 'common_id') %>% 
-  mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
-  
-  mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_2 ,
-         fe_mg_fort = fe_mg_fort+fe_mg_fort_2,
-         thia_mg_fort = thia_mg_fort+thia_mg_fort_2,
-         ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_2,
-         vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_2,
-         niac_mg_fort = niac_mg_fort + niac_mg_fort_2,
-         vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_2, 
-         vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_2,
-         zn_mg_fort = zn_mg_fort + zn_mg_fort_2,
-         
-         
-         
-         folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_2,
-         fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_2,
-         thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_2,
-         ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_2,
-         vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_2,
-         niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_2,
-         vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_2, 
-         vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_2,
-         zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_2
-  )
-
-
-hh_mn_intake_fort_wf_comm <- hh_mn_intake_fort_rice%>% 
-  # take the fortification scenarios of rice and add on top 
-  left_join(wf_conttributions_comerical, by= 'common_id') %>% 
-  mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
-  
-  mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_2 ,
-         fe_mg_fort = fe_mg_fort+fe_mg_fort_2,
-         thia_mg_fort = thia_mg_fort+thia_mg_fort_2,
-         ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_2,
-         vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_2,
-         niac_mg_fort = niac_mg_fort + niac_mg_fort_2,
-         vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_2, 
-         vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_2,
-         zn_mg_fort = zn_mg_fort + zn_mg_fort_2,
-         
-         
-         
-         folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_2,
-         fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_2,
-         thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_2,
-         ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_2,
-         vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_2,
-         niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_2,
-         vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_2, 
-         vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_2,
-         zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_2
-  )
-
-# maximum case (all vehicles fortified)
-all_vehicles <- hh_mn_intake_fort_rice %>% 
-  left_join(wf_conttributions_comerical, by= 'common_id') %>% 
-  mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
-  
-  mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_2 ,
-         fe_mg_fort = fe_mg_fort+fe_mg_fort_2,
-         thia_mg_fort = thia_mg_fort+thia_mg_fort_2,
-         ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_2,
-         vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_2,
-         niac_mg_fort = niac_mg_fort + niac_mg_fort_2,
-         vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_2, 
-         vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_2,
-         zn_mg_fort = zn_mg_fort + zn_mg_fort_2,
-         
-         
-         
-         folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_2,
-         fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_2,
-         thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_2,
-         ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_2,
-         vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_2,
-         niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_2,
-         vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_2, 
-         vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_2,
-         zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_2
-  ) %>% 
-  select(
-    common_id, 
-    energy_kcal,
-    Total_Consumption_Quantity,
-    Purchased_Quantity ,
-    ends_with("_fort"),
-    ends_with("_wfp")
-  ) %>% 
-  rename(wf_comm_quantity = Purchased_Quantity,
-         rice_pds_quantity = Total_Consumption_Quantity) %>% 
-  left_join(rice_conttributions_comerical, by= 'common_id') %>% 
-  mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
-  
-  mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_2 ,
-         fe_mg_fort = fe_mg_fort+fe_mg_fort_2,
-         thia_mg_fort = thia_mg_fort+thia_mg_fort_2,
-         ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_2,
-         vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_2,
-         niac_mg_fort = niac_mg_fort + niac_mg_fort_2,
-         vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_2, 
-         vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_2,
-         zn_mg_fort = zn_mg_fort + zn_mg_fort_2,
-         
-         
-         
-         folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_2,
-         fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_2,
-         thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_2,
-         ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_2,
-         vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_2,
-         niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_2,
-         vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_2, 
-         vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_2,
-         zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_2
-  ) %>% 
-  select(
-    common_id,
-    energy_kcal,
-    Purchased_Quantity , 
-    rice_pds_quantity,
-    wf_comm_quantity,
-    ends_with("_fort"),
-    ends_with("_wfp")
-  ) %>% 
-  rename(rice_comm_quantity = Purchased_Quantity) %>% 
-  left_join(wf_contributions, by= 'common_id') %>% 
-  mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
-  
-  mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_wf ,
-         fe_mg_fort = fe_mg_fort+fe_mg_fort_wf,
-         thia_mg_fort = thia_mg_fort+thia_mg_fort_wf,
-         ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_wf,
-         vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_wf,
-         niac_mg_fort = niac_mg_fort + niac_mg_fort_wf,
-         vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_wf, 
-         vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_wf,
-         zn_mg_fort = zn_mg_fort + zn_mg_fort_wf,
-         
-         
-         
-         folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_wf,
-         fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_wf,
-         thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_wf,
-         ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_wf,
-         vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_wf,
-         niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_wf,
-         vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_wf, 
-         vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_wf,
-         zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_wf
-  ) %>% 
-  select(
-    common_id, Total_Consumption_Quantity , wf_comm_quantity, rice_comm_quantity,
-    rice_pds_quantity,
-    energy_kcal,
-    ends_with("_fort"),
-    ends_with("_wfp")
-  ) %>% 
-  rename(wf_pds_quantity = Total_Consumption_Quantity)
-
+# 
+# 
+# hh_mn_intake_fort_rice_comm <- hh_mn_intake_fort_rice%>% 
+#   # take the fortification scenarios of rice and add on top 
+#   left_join(rice_conttributions_comerical, by= 'common_id') %>% 
+#   mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
+#   
+#   mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_2 ,
+#          fe_mg_fort = fe_mg_fort+fe_mg_fort_2,
+#          thia_mg_fort = thia_mg_fort+thia_mg_fort_2,
+#          ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_2,
+#          vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_2,
+#          niac_mg_fort = niac_mg_fort + niac_mg_fort_2,
+#          vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_2, 
+#          vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_2,
+#          zn_mg_fort = zn_mg_fort + zn_mg_fort_2,
+#          
+#          
+#          
+#          folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_2,
+#          fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_2,
+#          thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_2,
+#          ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_2,
+#          vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_2,
+#          niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_2,
+#          vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_2, 
+#          vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_2,
+#          zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_2
+#   )
+# 
+# 
+# hh_mn_intake_fort_wf_comm <- hh_mn_intake_fort_rice%>% 
+#   # take the fortification scenarios of rice and add on top 
+#   left_join(wf_conttributions_comerical, by= 'common_id') %>% 
+#   mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
+#   
+#   mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_2 ,
+#          fe_mg_fort = fe_mg_fort+fe_mg_fort_2,
+#          thia_mg_fort = thia_mg_fort+thia_mg_fort_2,
+#          ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_2,
+#          vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_2,
+#          niac_mg_fort = niac_mg_fort + niac_mg_fort_2,
+#          vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_2, 
+#          vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_2,
+#          zn_mg_fort = zn_mg_fort + zn_mg_fort_2,
+#          
+#          
+#          
+#          folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_2,
+#          fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_2,
+#          thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_2,
+#          ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_2,
+#          vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_2,
+#          niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_2,
+#          vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_2, 
+#          vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_2,
+#          zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_2
+#   )
+# 
+# # maximum case (all vehicles fortified)
+# all_vehicles <- hh_mn_intake_fort_rice %>% 
+#   left_join(wf_conttributions_comerical, by= 'common_id') %>% 
+#   mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
+#   
+#   mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_2 ,
+#          fe_mg_fort = fe_mg_fort+fe_mg_fort_2,
+#          thia_mg_fort = thia_mg_fort+thia_mg_fort_2,
+#          ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_2,
+#          vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_2,
+#          niac_mg_fort = niac_mg_fort + niac_mg_fort_2,
+#          vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_2, 
+#          vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_2,
+#          zn_mg_fort = zn_mg_fort + zn_mg_fort_2,
+#          
+#          
+#          
+#          folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_2,
+#          fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_2,
+#          thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_2,
+#          ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_2,
+#          vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_2,
+#          niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_2,
+#          vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_2, 
+#          vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_2,
+#          zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_2
+#   ) %>% 
+#   select(
+#     common_id, 
+#     energy_kcal,
+#     Total_Consumption_Quantity,
+#     Purchased_Quantity ,
+#     ends_with("_fort"),
+#     ends_with("_wfp")
+#   ) %>% 
+#   rename(wf_comm_quantity = Purchased_Quantity,
+#          rice_pds_quantity = Total_Consumption_Quantity) %>% 
+#   left_join(rice_conttributions_comerical, by= 'common_id') %>% 
+#   mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
+#   
+#   mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_2 ,
+#          fe_mg_fort = fe_mg_fort+fe_mg_fort_2,
+#          thia_mg_fort = thia_mg_fort+thia_mg_fort_2,
+#          ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_2,
+#          vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_2,
+#          niac_mg_fort = niac_mg_fort + niac_mg_fort_2,
+#          vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_2, 
+#          vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_2,
+#          zn_mg_fort = zn_mg_fort + zn_mg_fort_2,
+#          
+#          
+#          
+#          folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_2,
+#          fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_2,
+#          thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_2,
+#          ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_2,
+#          vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_2,
+#          niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_2,
+#          vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_2, 
+#          vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_2,
+#          zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_2
+#   ) %>% 
+#   select(
+#     common_id,
+#     energy_kcal,
+#     Purchased_Quantity , 
+#     rice_pds_quantity,
+#     wf_comm_quantity,
+#     ends_with("_fort"),
+#     ends_with("_wfp")
+#   ) %>% 
+#   rename(rice_comm_quantity = Purchased_Quantity) %>% 
+#   left_join(wf_contributions, by= 'common_id') %>% 
+#   mutate(across(everything(), ~ifelse(is.na(.),0,.))) %>% 
+#   
+#   mutate(folate_mcg_fort  = folate_mcg_fort+folate_mcg_fort_wf ,
+#          fe_mg_fort = fe_mg_fort+fe_mg_fort_wf,
+#          thia_mg_fort = thia_mg_fort+thia_mg_fort_wf,
+#          ribo_mg_fort = ribo_mg_fort+ribo_mg_fort_wf,
+#          vitb12_mcg_fort = vitb12_mcg_fort+vitb12_mcg_fort_wf,
+#          niac_mg_fort = niac_mg_fort + niac_mg_fort_wf,
+#          vitb6_mg_fort = vitb6_mg_fort+ vitb6_mg_fort_wf, 
+#          vita_rae_mcg_fort = vita_rae_mcg_fort + vita_rae_mcg_fort_wf,
+#          zn_mg_fort = zn_mg_fort + zn_mg_fort_wf,
+#          
+#          
+#          
+#          folate_mcg_fort_wfp = folate_mcg_fort_wfp+folate_mcg_fort_wfp_wf,
+#          fe_mg_fort_wfp = fe_mg_fort_wfp+fe_mg_fort_wfp_wf,
+#          thia_mg_fort_wfp = thia_mg_fort_wfp+thia_mg_fort_wfp_wf,
+#          ribo_mg_fort_wfp = ribo_mg_fort_wfp+ribo_mg_fort_wfp_wf,
+#          vitb12_mcg_fort_wfp = vitb12_mcg_fort_wfp+vitb12_mcg_fort_wfp_wf,
+#          niac_mg_fort_wfp = niac_mg_fort_wfp + niac_mg_fort_wfp_wf,
+#          vitb6_mg_fort_wfp = vitb6_mg_fort_wfp+ vitb6_mg_fort_wfp_wf, 
+#          vita_rae_mcg_fort_wfp = vita_rae_mcg_fort_wfp + vita_rae_mcg_fort_wfp_wf,
+#          zn_mg_fort_wfp = zn_mg_fort_wfp + zn_mg_fort_wfp_wf
+#   ) %>% 
+#   select(
+#     common_id, Total_Consumption_Quantity , wf_comm_quantity, rice_comm_quantity,
+#     rice_pds_quantity,
+#     energy_kcal,
+#     ends_with("_fort"),
+#     ends_with("_wfp")
+#   ) %>% 
+#   rename(wf_pds_quantity = Total_Consumption_Quantity)
+# 
 
 hh_expenditure <- hh_expenditure%>%
   mutate(
@@ -635,22 +635,22 @@ hh_expenditure <- hh_expenditure%>%
 
 ## wheat flour 
 
-nss_region_inad_wf<- aggregated_inadequacy(hh_mn_intake_fort_wf, `nss_region`)
-national_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `national`)
-state_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `state`)
-sep_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `sep_quintile`)
-res_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `res_quintile`)
-sector_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `sector`)
-
-all_inad_wf <- national_inad_wf %>% 
-  rename(category = national) %>% 
-  mutate(category = "national") %>% 
-  bind_rows(state_inad_wf %>% rename(category = state)) %>% 
-  bind_rows(sep_inad_wf %>% rename(category = sep_quintile) %>% 
-              mutate(category = paste("quntile", category))) %>% 
-  bind_rows(sector_inad_wf %>% rename(category = sector)%>% mutate(category = ifelse(category == 1, 
-                                                                                     "Urban", "Rural"))) %>% 
-  bind_rows(res_inad_wf %>% rename(category = res_quintile) )
+# nss_region_inad_wf<- aggregated_inadequacy(hh_mn_intake_fort_wf, `nss_region`)
+# national_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `national`)
+# state_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `state`)
+# sep_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `sep_quintile`)
+# res_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `res_quintile`)
+# sector_inad_wf <- aggregated_inadequacy(hh_mn_intake_fort_wf, `sector`)
+# 
+# all_inad_wf <- national_inad_wf %>% 
+#   rename(category = national) %>% 
+#   mutate(category = "national") %>% 
+#   bind_rows(state_inad_wf %>% rename(category = state)) %>% 
+#   bind_rows(sep_inad_wf %>% rename(category = sep_quintile) %>% 
+#               mutate(category = paste("quntile", category))) %>% 
+#   bind_rows(sector_inad_wf %>% rename(category = sector)%>% mutate(category = ifelse(category == 1, 
+#                                                                                      "Urban", "Rural"))) %>% 
+#   bind_rows(res_inad_wf %>% rename(category = res_quintile) )
 
 
 # rice commercial 
@@ -714,7 +714,6 @@ all_inad_wf <- national_inad_wf %>%
 #     across(contains("inad"),~survey_mean(. == 1, proportion = T, na.rm = T)*100)
 #   )
 
-# test
 
 
 ## Save #############################s##########################################
@@ -722,20 +721,20 @@ all_inad_wf <- national_inad_wf %>%
 
 
 # summary csvs
-write.csv(all_inad_wf,"india_wf_inad_v2.csv")
+# write.csv(all_inad_wf,"india_wf_inad_v2.csv")
 # write.csv(all_inad_rice,"india_rice_inad.csv" )
 # write.csv(all_inad_com_rice, 'india_rice_com_inad.csv')
 # write.csv(all_inad_com_wf, 'india_wf_com_inad.csv')
 
 # r data for further analysis
-saveRDS(hh_mn_intake_fort_wf, "ind_fort_wf_v2.rds")
-# saveRDS(hh_mn_intake_fort_rice, "ind_fort_rice.rds")
+# saveRDS(hh_mn_intake_fort_wf, "ind_fort_wf_v2.rds")
+saveRDS(hh_mn_intake_fort_rice, "ind_fort_rice.rds")
 # saveRDS(hh_mn_intake_fort_rice_comm, "ind_fort_rice_com.rds")
 # saveRDS(hh_mn_intake_fort_wf_comm, "ind_fort_wf_com.rds")
 # saveRDS(all_vehicles, "ind_fort_all.rds")
 
 # saveRDS(nss_region_inad, "nss_region_inad_rice.rds" )
-saveRDS(nss_region_inad_wf, "nss_region_inad_wf_v2.rds" )
+# saveRDS(nss_region_inad_wf, "nss_region_inad_wf_v2.rds" )
 # saveRDS(nss_region_inad_com_rice, "nss_region_inad_rice_com.rds" )
 # saveRDS(nss_region_inad_com_wf, "nss_region_inad_wf_com.rds" )
 # rm(list = ls())
