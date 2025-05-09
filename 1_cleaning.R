@@ -104,6 +104,8 @@ hh_afe <- level02 %>%
   ) %>% 
   select(common_id, afe, pc)
 
+
+
 # check that it is roughly around the y = x line
 hh_afe %>% 
   ggplot(aes(x = pc,  y = afe))+ 
@@ -330,7 +332,7 @@ hh_expenditure %>%
 saveRDS(hh_expenditure, file = "ind_nss2223_hh_expenditure.rds")
 saveRDS(food_consumption_daily_afe, file = "ind_nss2223_food_consumption.rds")
 saveRDS(hh_mn_intake, file = "ind_nss2223_base_case.rds")
-
+saveRDS(hh_afe, file = "data/processed/ind_nss2223_afe.rds")
 
 rm(list = ls())
 

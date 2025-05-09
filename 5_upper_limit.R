@@ -6,7 +6,7 @@
 
 # Author: Gabriel Battcock
 # Created: 
-# Last updated: 07 January 2025
+# Last updated: 09 May 2025
 
 # package loading
 
@@ -52,7 +52,7 @@ hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
 # nss_region_inad_wf <- readRDS("nss_region_inad_wf.rds" )
 food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
 
-readRDS("ind_fort_wf.rds")
+# readRDS("ind_fort_wf.rds")
 hh_mn_intake_fort_wf <-  readRDS("ind_fort_wf_v2.rds")
 hh_mn_intake_fort_rice <- readRDS( "ind_fort_rice.rds")
 hh_mn_intake_fort_rice_comm <-   readRDS("ind_fort_rice_com.rds")
@@ -102,16 +102,16 @@ nin_ear <- data.frame(
   )
 )
 
-# PDS rice fortification
+# Step 1: look how many households are above UL before fortification 
 base_excess_iron<- hh_mn_intake_fort_wf %>% 
   filter(iron_mg>45)
 
-# look at overall energy distribution
-
+# look at overall energy distribution of population 
 hh_mn_intake_fort_wf %>% 
   ggplot(aes(x = energy_kcal))+
   geom_histogram()
 
+# calculate the 
 hh_mn_intake_fort_rice %>% 
   summarise(
     mean = mean(energy_kcal),
