@@ -721,20 +721,20 @@ hh_expenditure <- hh_expenditure%>%
 
 
 # summary csvs
-# write.csv(all_inad_wf,"india_wf_inad_v2.csv")
-# write.csv(all_inad_rice,"india_rice_inad.csv" )
-# write.csv(all_inad_com_rice, 'india_rice_com_inad.csv')
-# write.csv(all_inad_com_wf, 'india_wf_com_inad.csv')
+# write.csv(all_inad_wf,paste(processed_path,"india_wf_inad_v2.csv"))
+write.csv(all_inad_rice,paste(processed_path,"india_rice_inad.csv" ))
+# write.csv(all_inad_com_rice, paste(processed_path,'india_rice_com_inad.csv'))
+# write.csv(all_inad_com_wf, paste(processed_path,'india_wf_com_inad.csv'))
 
 # r data for further analysis
 # saveRDS(hh_mn_intake_fort_wf, "ind_fort_wf_v2.rds")
-saveRDS(hh_mn_intake_fort_rice, "ind_fort_rice.rds")
-# saveRDS(hh_mn_intake_fort_rice_comm, "ind_fort_rice_com.rds")
-# saveRDS(hh_mn_intake_fort_wf_comm, "ind_fort_wf_com.rds")
-# saveRDS(all_vehicles, "ind_fort_all.rds")
+saveRDS(hh_mn_intake_fort_rice, paste(processed_path, "ind_fort_rice.rds"))
+# saveRDS(hh_mn_intake_fort_rice_comm, paste(processed_path,"ind_fort_rice_com.rds"))
+# saveRDS(hh_mn_intake_fort_wf_comm, paste(processed_path,"ind_fort_wf_com.rds"))
+# saveRDS(all_vehicles,paste(processed_path, "ind_fort_all.rds"))
 
-# saveRDS(nss_region_inad, "nss_region_inad_rice.rds" )
-# saveRDS(nss_region_inad_wf, "nss_region_inad_wf_v2.rds" )
-# saveRDS(nss_region_inad_com_rice, "nss_region_inad_rice_com.rds" )
-# saveRDS(nss_region_inad_com_wf, "nss_region_inad_wf_com.rds" )
+saveRDS(nss_region_inad, paste(processed_path,"nss_region_inad_rice.rds" ))
+# saveRDS(nss_region_inad_wf, paste(processed_path,"nss_region_inad_wf_v2.rds" ))
+# saveRDS(nss_region_inad_com_rice, paste(processed_path,"nss_region_inad_rice_com.rds" ))
+# saveRDS(nss_region_inad_com_wf,paste(processed_path, "nss_region_inad_wf_com.rds" ))
 # rm(list = ls())

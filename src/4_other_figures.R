@@ -49,7 +49,7 @@ ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Progra
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
 nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
 
-nss_region_inad_rice <- readRDS(paste0(processed_path,"nss_region_inad_rice.rds" ))
+nss_region_inad_rice <- readRDS("nss_region_inad_rice.rds" )
 nss_region_inad_wf <- readRDS("nss_region_inad_rice.rds" )
 food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
 

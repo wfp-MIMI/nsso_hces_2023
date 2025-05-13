@@ -231,7 +231,7 @@ hh_mn_intake_fort_rice %>%
 
 
 hh_mn_intake_fort_wf %>% 
-  filter(fe_mg_fort>45 &
+  filter(fe_mg_fort<15 &
            !(common_id %in%exclude$common_id))   %>% 
   summarise(
     n(),
@@ -249,7 +249,7 @@ hh_mn_intake_fort_wf %>%
 
 
 hh_mn_intake_fort_wf %>% 
-  filter(fe_mg_fort_wfp>45 &
+  filter(fe_mg_fort_wfp<15 &
            !(common_id %in%exclude$common_id))   %>% 
   summarise(
     n(),
@@ -411,34 +411,82 @@ all_vehicles %>%
 
 ## plots
 
-all_vehicles %>% 
+hh_mn_intake_fort_wf %>% 
   filter(!(common_id %in%exclude$common_id)) %>% 
   ggplot(aes(x = fe_mg_fort))+
-  geom_histogram()+ 
+  geom_histogram(fill = '#648FFF')+ 
   geom_vline(xintercept = 15, color = 'red')+
   geom_vline(xintercept = 29, color = 'blue')+
   geom_vline(xintercept = 45, color = 'red')+
   xlim(0,75)+
-  ylim(0,60000)
+  ylim(0,60000)+
+  theme_ipsum_es()+
+  xlab("Iron intake per day per AFE (mg)")
 
-all_vehicles %>% 
+hh_mn_intake_fort_wf %>% 
   filter(!(common_id %in%exclude$common_id)) %>% 
   ggplot(aes(x = fe_mg_fort_wfp))+
-  geom_histogram()+ 
+  geom_histogram(fill = '#648FFF')+ 
   geom_vline(xintercept = 15, color = 'red')+
   geom_vline(xintercept = 29, color = 'blue')+
   geom_vline(xintercept = 45, color = 'red')+
   xlim(0,75)+
-  ylim(0,60000)
+  ylim(0,60000)+
+  theme_ipsum_es()+
+  xlab("Iron intake per day per AFE (mg)")
 
 hh_mn_intake_fort_rice %>% 
   filter(!(common_id %in%exclude$common_id)) %>% 
   ggplot(aes(x = iron_mg))+
-  geom_histogram()+ 
+  geom_histogram(fill = '#648FFF')+ 
   geom_vline(xintercept = 15, color = 'red')+
   geom_vline(xintercept = 29, color = 'blue')+
   geom_vline(xintercept = 45, color = 'red')+
   xlim(0,75)+
-  ylim(0,60000)
+  ylim(0,60000)+
+  theme_ipsum_es()+
+  xlab("Iron intake per day per AFE (mg)")
 
 hh_mn_intake_fort_rice %>% summarise(n())
+
+
+
+hh_mn_intake_fort_wf %>%
+  # filter(!(common_id %in%exclude$common_id)) %>% 
+  ggplot(aes(x = folate_mcg_fort))+
+  geom_histogram(fill = '#648FFF')+ 
+  geom_vline(xintercept = 180, color = 'red')+
+  geom_vline(xintercept = 220, color = 'blue')+
+  geom_vline(xintercept = 1000, color = 'red')+
+  xlim(0,1000)+
+  ylim(0,60000)+
+  theme_ipsum_es()+
+  xlab("Iron intake per day per AFE (mg)")
+
+hh_mn_intake_fort_wf %>% 
+  # filter(!(common_id %in%exclude$common_id)) %>% 
+  ggplot(aes(x = folate_mcg_fort_wfp))+
+  geom_histogram(fill = '#648FFF')+ 
+  geom_vline(xintercept = 180, color = 'red')+
+  geom_vline(xintercept = 220, color = 'blue')+
+  geom_vline(xintercept = 1000, color = 'red')+
+  xlim(0,1000)+
+  ylim(0,60000)+
+  theme_ipsum_es()+
+  xlab("Iron intake per day per AFE (mg)")
+
+
+hh_mn_intake_fort_rice %>% 
+  filter(!(common_id %in%exclude$common_id)) %>% 
+  ggplot(aes(x = folate_ug))+
+  geom_histogram(fill = '#648FFF')+ 
+  geom_vline(xintercept = 180, color = 'red')+
+  geom_vline(xintercept = 220, color = 'blue')+
+  geom_vline(xintercept = 1000, color = 'red')+
+  xlim(0,1000)+
+  ylim(0,60000)+
+  theme_ipsum_es()+
+  xlab("Iron intake per day per AFE (mg)")
+
+hh_mn_intake_fort_rice %>% summarise(n())
+

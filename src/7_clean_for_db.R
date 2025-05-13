@@ -28,6 +28,25 @@ path_to_save <- 'C:/Users/gabriel.battcock/OneDrive - World Food Programme/Gener
 
 ind_nss2223_base_ai <- readRDS(paste0(path_to_data, "ind_nss2223_base_case.rds"))
 
+ind_nss2223_base_ai <- ind_nss2223_base_ai %>% 
+  mutate(
+         iso3 = "IND",
+         survey = 'nss2223'
+  ) %>% 
+
+  rename(hhid = common_id,
+         vita_rae_mcg = vita_mcg,
+         thia_mg = vitb1_mg,
+         ribo_mg = vitb2_mg,
+         niac_mg = vitb3_mg,
+         vitb6_mg = vitb6_mg,
+
+         folate_mcg = folate_ug,
+         vitb12_mcg = vitaminb12_in_mcg,
+         fe_mg = iron_mg,
+         zn_mg = zinc_mg) %>% 
+  relocate(iso3, .before = hhid) %>% 
+  relocate(survey,.after = iso3)
 
 
 # food consumption 
@@ -62,7 +81,7 @@ ind_nss2223_fct <-  ind_202223_fct%>%
          ribo_mg = vitb2_mg,
          niac_mg = vitb3_mg,
          vitb6_mg = vitb6_mg,
-         vitb7_mg = vitb7_ug,
+         vitb7_mcg = vitb7_ug,
          folate_mcg = folate_ug,
          vitb12_mcg = vitaminb12_in_mcg,
          fe_mg = iron_mg,
@@ -139,7 +158,7 @@ ind_nss2223_hh_info <- ind_nss2223_hh_expenditure %>%
          survey_wgt,
          afe,
          pc_expenditure) %>% 
-  filter( hhid %in% ind_nss2223_base_ai$common_id)
+  filter( hhid %in% ind_nss2223_base_ai$hhid)
 
 rm(ind_nss2223_afe, nss_raw_level1)
 
@@ -190,7 +209,8 @@ write_csv(ind_nss2223_base_ai, paste0(path_to_save, "ind_nss2223_base_ai.csv"))
 write_csv(ind_nss2223_food_consumption, paste0(path_to_save, "ind_nss2223_food_consumption.csv"))
 write_csv(ind_nss2223_fct, paste0(path_to_save, "ind_nss2223_fct.csv"))
 write_csv(ind_nss2223_hh_info, paste0(path_to_save, "ind_nss2223_hh_info.csv"))
-write_csv(ind_nss2223_vehicle_quantities, paste0(path_to_save, "ind_nss2223_hh_info.csv"))
+write_csv(ind_nss2223_vehicle_quantities, paste0(path_to_save, "ind_nss2223_vehicle_quantities.csv"))
+write_csv(ind_nss_mddw, paste0(path_to_save, "ind_nss2223_food_group.csv"))
 
 #
 
