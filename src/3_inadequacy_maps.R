@@ -1,12 +1,12 @@
 #########################################
-#      HCES 2022-23 INDIA               #
+#        HCES 2022-23 INDIA               #
 #          inadequacy maps              #
 #########################################
 
 
 # Author: Gabriel Battcock
 # Created: 
-# Last updated: 16 Jan 2025
+# Last updated: 13 May 2025
 
 rq_packages <- c("tidyverse","dplyr","readr","srvyr","ggplot2", "tidyr",
                  "ggridges", "gt", "haven","foreign",
@@ -37,19 +37,17 @@ processed_path <- "data/processed/"
 
 # read data
 
-food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
-hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
-# read in the fct
 # ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
-
+level01 <- haven::read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/level01.dta")
 ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Workstream 2/Nutrition analysis/shapefiles/IND/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
 nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
 
-nss_region_inad_rice <- readRDS("nss_region_inad_rice.rds")
-nss_region_inad_wf <- readRDS("nss_region_inad_wf.rds" )
-food_consumption_daily_afe <- readRDS("data/processed/ind_nss2223_food_consumption.rds")
+nss_region_inad_rice <- readRDS(paste0(processed_path,"nss_region_inad_rice.rds"))
+nss_region_inad_wf <- readRDS(paste0(processed_path,"nss_region_inad_wf_v2.rds" ))
+food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
+hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
 
 ################################################################################
 # run for international borders
@@ -72,9 +70,6 @@ food_consumption_daily_afe <- readRDS("data/processed/ind_nss2223_food_consumpti
 # plot(jammu_kashmir_sp, lty = 'dashed',add = TRUE)
 
 ################################################################################
-
-
-
 
 
 # map function geometry# map function 
@@ -101,17 +96,14 @@ inadequacy_map <- function(micronutrient,
               legend.outside.size = 0.35
     ) +
     # tm_borders(col = "black", lwd = 0.2) +
-    tm_shape(international_ind_state) +
+    tm_shape(ind_state) +
     # tm_text("State_Name", size = 0.6, remove.overlap = TRUE)+
     # tm_fill(col = "state") +
     tm_borders(col = "black", lwd = 1.5)+
-    tm_legend(show = F) +
-    tm_shape(jammu_kashmir_sp)+
-    tm_borders(lty = "dashed")
+    tm_legend(show = F) 
 }
 
 
-inadequacy_map()
 
 map_list <- function(input_list){
   #takes in a list of column names of MNs and plots inadequacy maps
@@ -136,45 +128,46 @@ nss_region_inad_sp <- nss_region_inad_rice %>%
   st_as_sf()
 
 #international borders
-nss_region_inad_sp <- nss_region_inad_rice %>% 
-  mutate(nss_region = as.numeric(nss_region)) %>% 
-  inner_join(nss_region_shapefile_intrenational, by= 'nss_region') %>% 
-  st_as_sf()
+# nss_region_inad_sp <- nss_region_inad_rice %>% 
+#   mutate(nss_region = as.numeric(nss_region)) %>% 
+#   inner_join(nss_region_shapefile_intrenational, by= 'nss_region') %>% 
+#   st_as_sf()
 
 
+inadequacy_map()
 
 base_rice <- list(
   c("folate_inad", "Folate base"),
   c("vitb12_inad", "Vitamin B12 base"),
-  c("fe_inad", "Iron base"),
-  c("vita_inad", "Vitamin A base"),
-  c("thia_inad", "Thiamin base"),
-  c("niac_inad", "Niacin base"),
-  c("vitb6_inad", "Vitamin B6 base"),
-  c("zn_inad", "Zinc base")
+  c("fe_inad", "Iron base")
+  # c("vita_inad", "Vitamin A base"),
+  # c("thia_inad", "Thiamin base"),
+  # c("niac_inad", "Niacin base"),
+  # c("vitb6_inad", "Vitamin B6 base"),
+  # c("zn_inad", "Zinc base")
 )
 
 base_rice[[2]][1]
 current_rice <- list(
   c("folate_inad_fort", "Folate current mandatory"),
   c("vitb12_inad_fort", "Vitamin B12 current mandatory"),
-  c("fe_inad_fort", "Iron current mandatory"),
-  c("vita_inad_fort", "Vitamin A current voluntary"),
-  c("thia_inad_fort", "Thiamin current voluntary"),
-  c("niac_inad_fort", "Niacin current voluntary"),
-  c("vitb6_inad_fort", "Vitamin B6 current voluntary"),
-  c("zn_inad_fort", "Zinc current voluntary")
+  c("fe_inad_fort", "Iron current mandatory")
+  # c("vita_inad_fort", "Vitamin A current voluntary"),
+  # c("thia_inad_fort", "Thiamin current voluntary"),
+  # c("niac_inad_fort", "Niacin current voluntary"),
+  # c("vitb6_inad_fort", "Vitamin B6 current voluntary"),
+  # c("zn_inad_fort", "Zinc current voluntary")
 )
 
 improved_rice <- list(
   c("folate_inad_fort_wfp", "Folate improved standard"),
   c("vitb12_inad_fort_wfp", "Vitamin B12 improved standard"),
-  c("fe_inad_fort_wfp", "Iron improved standard"),
-  c("vita_inad_fort_wfp", "Vitamin A improved standard"),
-  c("thia_inad_fort_wfp", "Thiamin improved standard"),
-  c("niac_inad_fort_wfp", "Niacin improved standard"),
-  c("vitb6_inad_fort_wfp", "Vitamin B6 improved standard"),
-  c("zn_inad_fort_wfp", "Zinc improved standard")
+  c("fe_inad_fort_wfp", "Iron improved standard")
+  # c("vita_inad_fort_wfp", "Vitamin A improved standard"),
+  # c("thia_inad_fort_wfp", "Thiamin improved standard"),
+  # c("niac_inad_fort_wfp", "Niacin improved standard"),
+  # c("vitb6_inad_fort_wfp", "Vitamin B6 improved standard"),
+  # c("zn_inad_fort_wfp", "Zinc improved standard")
 )
 
 
@@ -189,51 +182,51 @@ maps_rice_current[[1]]
 maps_rice_base[[1]]
 
 
-figure_path <- "figures/int_borders/"
+figure_path <- "figures/"
 
 
-for(i in 1:8){
+for(i in 1:length(maps_rice_base)){
   map <- maps_rice_base[[i]]
-  tmap_save(map, paste0(figure_path,"base/", base_rice[[i]][1] , ".png"),
-         width = 8, height = 9, units = "in")
+  tmap_save(map, paste0(figure_path,"base/", base_rice[[i]][1] , ".jpg"),
+         width = 8, height = 9, units = "in", dpi = 900)
 
 }
 
 
-for(i in 1:8){
+for(i in 1:length(maps_rice_current)){
   map <- maps_rice_current[[i]]
-  tmap_save(map, paste0(figure_path,"current_rice/", current_rice[[i]][1] , ".png"),
-            width = 8, height = 9, units = "in")
+  tmap_save(map, paste0(figure_path,"current_rice/", current_rice[[i]][1] , ".jpg"),
+            width = 8, height = 9, units = "in",dpi = 900)
   
 }
 
-for(i in 1:8){
+for(i in 1:length(maps_rice_wfp)){
   map <- maps_rice_wfp[[i]]
-  tmap_save(map, paste0(figure_path,"improved_rice/", improved_rice[[i]][1] , ".png"),
-            width = 8, height = 9, units = "in")
+  tmap_save(map, paste0(figure_path,"improved_rice/", improved_rice[[i]][1] , ".jpg"),
+            width = 8, height = 9, units = "in",dpi = 900)
   
 }
 
-tm_shape(ind_state) +
-  tm_fill(col = "grey77") +
-  tm_shape(nss_region_inad_sp) +
-  tm_fill(col = {{micronutrient}}, style = "cont", breaks = seq(0,100,by=10),
-          palette = (wesanderson::wes_palette("Zissou1Continuous")),
-          title = "Prevalence of inadequacy" ,
-          legend.is.portrait = FALSE
-  ) +
-  tm_layout(main.title = {{title}} , frame = F,
-            main.title.size = 0.8,
-            legend.outside.position = "bottom",
-            legend.outside.size = 0.35
-  ) +
-  # tm_borders(col = "black", lwd = 0.2) +
-  tm_shape(ind_state) +
-  # tm_text("State_Name", size = 0.6, remove.overlap = TRUE)+
-  # tm_fill(col = "state") +
-  tm_borders(col = "black", lwd = 1.5)+
-  tm_legend(show = T)
+legend_only <- tm_shape(nss_region_inad_sp) +
+  tm_fill(col = "folate_inad", 
+          style = "cont", 
+          breaks = seq(0, 100, by = 10),
+          palette = wesanderson::wes_palette("Zissou1", 100, type = "continuous"),
+          title = "Risk of inadequate micronutrient intake",
+          legend.is.portrait = FALSE ,
+          legend.show = TRUE) +
+  tm_layout(
+    legend.only = TRUE,
+    legend.position = c("center", 'center'),  # center horizontally
+    legend.outside = FALSE,
+    # legend.outside.position = "middle",
+    legend.width = 2,   # make it wide
+    legend.height = 0.2, # reduce height
+    outer.margins = c(0, 0, 0, 0)
+  )
 
+tmap_save(legend_only, paste0(figure_path, "inad_legend.jpg"),
+width = 2, height = 2, units = "in",dpi = 900)
 ## wheat flour 
 
 
@@ -248,23 +241,23 @@ nss_region_inad_sp <-  nss_region_inad_wf %>%
 current_wf <- list(
   c("folate_inad_fort", "Folate current mandatory"),
   c("vitb12_inad_fort", "Vitamin B12 current mandatory"),
-  c("fe_inad_fort", "Iron current mandatory"),
-  c("vita_inad_fort", "Vitamin A current voluntary"),
-  c("thia_inad_fort", "Thiamin current voluntary"),
-  c("niac_inad_fort", "Niacin current voluntary"),
-  c("vitb6_inad_fort", "Vitamin B6 current voluntary"),
-  c("zn_inad_fort", "Zinc current voluntary")
+  c("fe_inad_fort", "Iron current mandatory")
+  # c("vita_inad_fort", "Vitamin A current voluntary"),
+  # c("thia_inad_fort", "Thiamin current voluntary"),
+  # c("niac_inad_fort", "Niacin current voluntary"),
+  # c("vitb6_inad_fort", "Vitamin B6 current voluntary"),
+  # c("zn_inad_fort", "Zinc current voluntary")
 )
 
 improved_wf <- list(
   c("folate_inad_fort_wfp", "Folate improved standard"),
   c("vitb12_inad_fort_wfp", "Vitamin B12 improved standard"),
-  c("fe_inad_fort_wfp", "Iron improved standard"),
-  c("vita_inad_fort_wfp", "Vitamin A improved standard"),
-  c("thia_inad_fort_wfp", "Thiamin improved standard"),
-  c("niac_inad_fort_wfp", "Niacin improved standard"),
-  c("vitb6_inad_fort_wfp", "Vitamin B6 improved standard"),
-  c("zn_inad_fort_wfp", "Zinc improved standard")
+  c("fe_inad_fort_wfp", "Iron improved standard")
+  # c("vita_inad_fort_wfp", "Vitamin A improved standard"),
+  # c("thia_inad_fort_wfp", "Thiamin improved standard"),
+  # c("niac_inad_fort_wfp", "Niacin improved standard"),
+  # c("vitb6_inad_fort_wfp", "Vitamin B6 improved standard"),
+  # c("zn_inad_fort_wfp", "Zinc improved standard")
 )
 
 
@@ -279,17 +272,17 @@ maps_wf_wfp <- map_list(improved_wf)
 
 
 
-for(i in 1:8){
+for(i in 1:length(maps_wf_current)){
   map <- maps_wf_current[[i]]
-  tmap_save(map, paste0(figure_path,"current_wf/", current_wf[[i]][1] , ".png"),
-            width = 8, height = 9, units = "in")
+  tmap_save(map, paste0(figure_path,"current_wf/", current_wf[[i]][1] , ".jpg"),
+            width = 8, height = 9, units = "in",dpi = 900)
   
 }
 
-for(i in 1:8){
+for(i in 1:length(maps_wf_wfp)){
   map <- maps_wf_wfp[[i]]
-  tmap_save(map, paste0(figure_path,"improved_wf/", improved_wf[[i]][1] , ".png"),
-            width = 8, height = 9, units = "in")
+  tmap_save(map, paste0(figure_path,"improved_wf/", improved_wf[[i]][1] , ".jpg"),
+            width = 8, height = 9, units = "in", dpi = 900)
   
 }
 
@@ -331,16 +324,18 @@ intake_rice  <- food_consumption_daily_afe %>%
   
   slice(1) %>% 
   ungroup() %>% 
+  filter(combind >0) %>% 
   left_join(level01 %>% 
               mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>% 
   as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
-  srvyr::group_by(nss_region) %>% 
+  srvyr::group_by() %>% 
   summarise(
     
-    pc_pds_or_free =  survey_mean(combind,na.rm = T),
-    free = survey_mean(free,na.rm = T),
-    pds = survey_mean(pds, na.rm = T)
+    pc_pds_or_free =  survey_quantile(combind, quantile = 0.5, na.rm = T),
+    free = survey_mean(free,quantile = 0.5,na.rm = T),
+    pds = survey_mean(pds,quantile = 0.5, na.rm = T)
   ) 
+
 
 
 
@@ -395,9 +390,9 @@ legend_rice <- bi_legend(pal = "DkBlue2",
                     breaks = break_vals)
 
 # put legend and map together
-rice_bivariate <- ggdraw() +
-  draw_plot(bi_map_rice, 0, 0, 1, 1) +
-  draw_plot(legend_rice, 0.65, .2, 0.2, 0.2)
+rice_bivariate <- cowplot::ggdraw() +
+  cowplot::draw_plot(bi_map_rice, 0, 0, 1, 1) +
+  cowplot::draw_plot(legend_rice, 0.65, .2, 0.2, 0.2)
 
 rice_bivariate
 
@@ -525,11 +520,11 @@ wf_bivariate
 # save the bivaraite maps
 
 
-ggsave(paste0(figure_path,"bi_legend.png"), plot= legend_wf,   width = 2, height = 2, units = 'in')
+ggsave(paste0(figure_path,"bi_legend.jpg"), plot= legend_wf,   width = 2, height = 2, units = 'in', dpi  = 900)
 
-ggsave(paste0(figure_path,"bimap_wf.png"),bi_map_wf, width = 8, height= 9, units = 'in')
+ggsave(paste0(figure_path,"bimap_wf.jpg"),bi_map_wf, width = 8, height= 9, units = 'in', dpi = 900)
 
-ggsave(paste0(figure_path,"bimap_rice.png"),bi_map_rice, width = 8, height= 9, units = 'in')
+ggsave(paste0(figure_path,"bimap_rice.jpg"),bi_map_rice, width = 8, height= 9, units = 'in', dpi = 900)
 
 
 #####################################################################################################

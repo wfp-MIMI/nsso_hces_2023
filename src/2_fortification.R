@@ -40,9 +40,9 @@ names(data_list) <- tools::file_path_sans_ext(file_list)
 level01 <- data_list$level01
 
 
-food_consumption_daily_afe <- readRDS(paste0("ind_nss2223_food_consumption.rds"))
-hh_mn_intake <- readRDS(paste0("ind_nss2223_base_case.rds"))
-hh_expenditure <- readRDS(paste0("ind_nss2223_hh_expenditure.rds"))
+food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
+hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
+hh_expenditure <- readRDS(paste0(processed_path,"ind_nss2223_hh_expenditure.rds"))
 # read in the fct
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
@@ -617,7 +617,7 @@ hh_expenditure <- hh_expenditure%>%
 ## Create df with aggregated data
 
 # # rice pds
-# nss_region_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`nss_region`)
+nss_region_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`nss_region`)
 # state_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`state`)
 # sep_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`sep_quintile`) 
 # sector_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`sector`) 
@@ -722,19 +722,19 @@ hh_expenditure <- hh_expenditure%>%
 
 # summary csvs
 # write.csv(all_inad_wf,paste(processed_path,"india_wf_inad_v2.csv"))
-write.csv(all_inad_rice,paste(processed_path,"india_rice_inad.csv" ))
+write.csv(all_inad_rice,paste(processed_path0,"india_rice_inad.csv" ))
 # write.csv(all_inad_com_rice, paste(processed_path,'india_rice_com_inad.csv'))
 # write.csv(all_inad_com_wf, paste(processed_path,'india_wf_com_inad.csv'))
 
 # r data for further analysis
 # saveRDS(hh_mn_intake_fort_wf, "ind_fort_wf_v2.rds")
-saveRDS(hh_mn_intake_fort_rice, paste(processed_path, "ind_fort_rice.rds"))
+saveRDS(hh_mn_intake_fort_rice, paste(processed_path0, "ind_fort_rice.rds"))
 # saveRDS(hh_mn_intake_fort_rice_comm, paste(processed_path,"ind_fort_rice_com.rds"))
 # saveRDS(hh_mn_intake_fort_wf_comm, paste(processed_path,"ind_fort_wf_com.rds"))
 # saveRDS(all_vehicles,paste(processed_path, "ind_fort_all.rds"))
 
-saveRDS(nss_region_inad, paste(processed_path,"nss_region_inad_rice.rds" ))
+saveRDS(nss_region_inad, paste0(processed_path,"nss_region_inad_rice.rds" ))
 # saveRDS(nss_region_inad_wf, paste(processed_path,"nss_region_inad_wf_v2.rds" ))
 # saveRDS(nss_region_inad_com_rice, paste(processed_path,"nss_region_inad_rice_com.rds" ))
 # saveRDS(nss_region_inad_com_wf,paste(processed_path, "nss_region_inad_wf_com.rds" ))
-# rm(list = ls())
+rm(list = ls())

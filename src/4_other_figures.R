@@ -1,4 +1,3 @@
-
 #########################################
 #      HCES 2022-23 INDIA               #
 #          more figures              #
@@ -39,20 +38,19 @@ processed_path <- "data/processed/"
 
 ###
 
-food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
-hh_mn_intake <- readRDS("ind_nss2223_base_case.rds")
-# read in the fct
-ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
-
-
+# shape files
 ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Workstream 2/Nutrition analysis/shapefiles/IND/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
 nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
 
-nss_region_inad_rice <- readRDS("nss_region_inad_rice.rds" )
-nss_region_inad_wf <- readRDS("nss_region_inad_rice.rds" )
-food_consumption_daily_afe <- readRDS("ind_nss2223_food_consumption.rds")
+# food consumption and adequacy data
+food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
+hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
+nss_region_inad_rice <- readRDS(paste0(processed_path,"nss_region_inad_rice.rds" ))
+nss_region_inad_wf <- readRDS(paste0(processed_path,"nss_region_inad_rice.rds" ))
+food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
 
+# food group data
 ind_nss_hdds <- read_xlsx(paste0(raw_path, "ind_nss2223_hdds.xlsx"),sheet = 1)
 
 

@@ -53,11 +53,11 @@ hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
 food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
 
 # readRDS("ind_fort_wf.rds")
-hh_mn_intake_fort_wf <-  readRDS("ind_fort_wf_v2.rds")
-hh_mn_intake_fort_rice <- readRDS( "ind_fort_rice.rds")
-hh_mn_intake_fort_rice_comm <-   readRDS("ind_fort_rice_com.rds")
-hh_mn_intake_fort_wf_comm <-  readRDS("ind_fort_wf_com.rds")
-all_vehicles <- readRDS("ind_fort_all.rds")
+hh_mn_intake_fort_wf <-  readRDS("data/processed/ind_fort_wf_v2.rds")
+hh_mn_intake_fort_rice <- readRDS( "data/processed/ind_fort_rice.rds")
+hh_mn_intake_fort_rice_comm <-   readRDS("data/processed/ind_fort_rice_com.rds")
+hh_mn_intake_fort_wf_comm <-  readRDS("data/processed/ind_fort_wf_com.rds")
+all_vehicles <- readRDS("data/processed/ind_fort_all.rds")
 
 ################################################################################
 # load upp limit
@@ -411,7 +411,7 @@ all_vehicles %>%
 
 ## plots
 
-hh_mn_intake_fort_wf %>% 
+current <- hh_mn_intake_fort_wf %>% 
   filter(!(common_id %in%exclude$common_id)) %>% 
   ggplot(aes(x = fe_mg_fort))+
   geom_histogram(fill = '#648FFF')+ 
@@ -423,7 +423,7 @@ hh_mn_intake_fort_wf %>%
   theme_ipsum_es()+
   xlab("Iron intake per day per AFE (mg)")
 
-hh_mn_intake_fort_wf %>% 
+international <- hh_mn_intake_fort_wf %>% 
   filter(!(common_id %in%exclude$common_id)) %>% 
   ggplot(aes(x = fe_mg_fort_wfp))+
   geom_histogram(fill = '#648FFF')+ 
@@ -435,7 +435,7 @@ hh_mn_intake_fort_wf %>%
   theme_ipsum_es()+
   xlab("Iron intake per day per AFE (mg)")
 
-hh_mn_intake_fort_rice %>% 
+no_fortification <- hh_mn_intake_fort_rice %>% 
   filter(!(common_id %in%exclude$common_id)) %>% 
   ggplot(aes(x = iron_mg))+
   geom_histogram(fill = '#648FFF')+ 
@@ -446,6 +446,15 @@ hh_mn_intake_fort_rice %>%
   ylim(0,60000)+
   theme_ipsum_es()+
   xlab("Iron intake per day per AFE (mg)")
+
+
+ggsave(plot = current, filename = paste0(figure_path, "ul_analysis/current.jpg"),
+       dpi = 900, height = 6, width = 6)
+ggsave(plot = international, filename = paste0(figure_path, "ul_analysis/international.jpg"),
+       dpi = 900, height = 6, width = 6)
+ggsave(plot = no_fortification, filename = paste0(figure_path, "ul_analysis/no_fort.jpg"),
+       dpi = 900, height = 6, width = 6)
+
 
 hh_mn_intake_fort_rice %>% summarise(n())
 

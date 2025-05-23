@@ -6,7 +6,7 @@
 
 # Author: Gabriel Battcock
 # Created: 
-# Last updated: 18 March 2025
+# Last updated: 15 May 2025
 
 rq_packages <- c("tidyverse","dplyr","readr","srvyr","ggplot2", "tidyr",
                  "ggridges", "gt", "haven","foreign",
@@ -55,6 +55,10 @@ mol_db <- read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/D
                     sheet ='Total and digestible IAA',
                     skip =1)
 
+protein_diaas <- read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/Ileal IAA digestibility and DIAAS of world foods_Molly Muleya_November 2021_RS_14102024.xlsx",
+                           sheet ='DIAAS (older child, adolescent,',
+                           skip = 0)
+
 ################################################################################
 hh_expenditure <- hh_expenditure %>% 
   mutate(
@@ -82,6 +86,12 @@ mol_db <- mol_db %>%
   ) %>% 
   select(s_num, ratio_cyst,ratio_lys,ratio_tryp,ratio_meth,ratio_thre, ratio_hist,ratio_iso,ratio_leuc,ratio_phe,ratio_val)
 
+protein_diaas <- protein_diaas %>%
+  select(S.No, `Final DIAAS Score`) %>% 
+  rename(s_num = S.No,
+         diaas = `Final DIAAS Score`)
+  
+
 ################################################################################
 
 # match food items to protein
@@ -99,6 +109,7 @@ adjust_lysine <- function(data, set_lysine_multiplier = 1.25) {
                 by = c("Item_Code" = "item_code")) %>%
       left_join(ind_202223_fct_amino_acids %>% select(-protein_g), by = c("Item_Code" = "item_code")) %>%
       left_join(mol_db, by = "s_num") %>%
+      left_join(protein_diaas, by = "s_num") %>% 
       mutate(
         protein_g = (Total_Consumption_Quantity / 100) * protein_g,
         
@@ -118,12 +129,13 @@ adjust_lysine <- function(data, set_lysine_multiplier = 1.25) {
         phenylalanine_g = (protein_g / 100) * phenylalanine_g * ratio_phe,
         valine_g = (protein_g / 100) * valine_g * ratio_val,
         
-        energy_kcal = (Total_Consumption_Quantity / 100) * energy_kcal
+        energy_kcal = (Total_Consumption_Quantity / 100) * energy_kcal,
+        protein_adjust_g = (diaas/100)*protein_g
       )
   }
   
 #set the value
-set_lysine_multiplier <- 1.25
+set_lysine_multiplier <- 1
 
 item_level_amino_acids <-adjust_lysine(food_consumption_daily_afe, set_lysine_multiplier)
 # rm(mol_db)
@@ -134,7 +146,7 @@ household_amino_acids <- item_level_amino_acids %>%
   group_by(common_id) %>% 
   summarise(
     across(
-      c(lysine_g,tryptophan_g,methionine_g,cystine_g,threonine_g,histidine_g,isoleucine_g,leucine_g,phenylalanine_g,valine_g, energy_kcal, protein_g),
+      c(lysine_g,tryptophan_g,methionine_g,cystine_g,threonine_g,histidine_g,isoleucine_g,leucine_g,phenylalanine_g,valine_g, energy_kcal, protein_adjust_g),
       ~sum(., na.rm = TRUE)
     )
   ) %>% 
@@ -170,7 +182,7 @@ median_aa_intake <- function(...){
     ) %>% 
     srvyr::summarise(
       across(
-        c(protein_g,lysine_g, tryptophan_g,cystine_g,methionine_g,threonine_g,histidine_g,isoleucine_g,leucine_g,phenylalanine_g,valine_g),
+        c(protein_adjust_g,lysine_g, tryptophan_g,cystine_g,methionine_g,threonine_g,histidine_g,isoleucine_g,leucine_g,phenylalanine_g,valine_g),
         list(
           median = ~survey_quantile(., 0.5,na.rm = TRUE),
           Q1 = ~survey_quantile(., 0.25, na.rm = TRUE),
@@ -272,7 +284,7 @@ save_intake_map <- function(var_name, amino_acid) {
 
 
 
-save_intake_map("lysine_g_median_q50", "Lysine")
+save_intake_map("protein_adjust_g_median_q50", "Protein")
 
 # Only calculate for the base case
 if (set_lysine_multiplier == 1) {
@@ -286,7 +298,7 @@ if (set_lysine_multiplier == 1) {
     "leucine_g_median_q50" = "Leucine",
     "phenylalanine_g_median_q50" = "Phenylalanine",
     "valine_g_median_q50" = "Valine",
-    "protein_g_median_q50" = "Protein"
+    "protein_adjust_g_median_q50" = "Protein"
   )
   
   # Apply function to save each amino acid intake map
@@ -341,8 +353,8 @@ inad_aa_intake <- function(...){
       
       
       
-      protein_inad = ifelse(protein_g<prot_rda, 1,0),
-      prot_aas = protein_g/prot_rda,
+      protein_inad = ifelse(protein_adjust_g<prot_rda, 1,0),
+      prot_aas = protein_adjust_g/prot_rda,
       lys_aas = lysine_g/lys_rda,
       tryp_aas = tryptophan_g/tryp_rda,
       cyst_aas = cystine_g/cyst_rda,
