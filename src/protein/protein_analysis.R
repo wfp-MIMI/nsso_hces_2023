@@ -6,7 +6,7 @@
 
 # Author: Gabriel Battcock
 # Created: 
-# Last updated: 15 May 2025
+# Last updated: 29 May 2025
 
 rq_packages <- c("tidyverse","dplyr","readr","srvyr","ggplot2", "tidyr",
                  "ggridges", "gt", "haven","foreign",
@@ -55,8 +55,8 @@ mol_db <- read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/D
                     sheet ='Total and digestible IAA',
                     skip =1)
 
-protein_diaas <- read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/Ileal IAA digestibility and DIAAS of world foods_Molly Muleya_November 2021_RS_14102024.xlsx",
-                           sheet ='DIAAS (older child, adolescent,',
+protein_digestibility <- read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/Ileal IAA digestibility and DIAAS of world foods_Molly Muleya_November 2021_RS_14102024.xlsx",
+                           sheet ='IAA digestibility',
                            skip = 0)
 
 ################################################################################
@@ -70,6 +70,7 @@ hh_expenditure <- hh_expenditure %>%
 ind_202223_fct_amino_acids <- ind_202223_fct_amino_acids %>% 
   rename(s_num = `S.No in Molly's database`)
 
+# rename adjustable ratios 
 mol_db <- mol_db %>% 
   rename(
     s_num= S.No,
@@ -86,10 +87,16 @@ mol_db <- mol_db %>%
   ) %>% 
   select(s_num, ratio_cyst,ratio_lys,ratio_tryp,ratio_meth,ratio_thre, ratio_hist,ratio_iso,ratio_leuc,ratio_phe,ratio_val)
 
-protein_diaas <- protein_diaas %>%
-  select(S.No, `Final DIAAS Score`) %>% 
+#rename protein distibility
+protein_digestibility <- 
+  
+  protein_digestibility %>%
+  select(S.No, `Protein`) %>% 
+  slice(0:-1) %>% 
   rename(s_num = S.No,
-         diaas = `Final DIAAS Score`)
+         prot_diget = `Protein`) %>% 
+  mutate(s_num = as.numeric(s_num),
+         prot_diget = as.numeric(prot_diget))
   
 
 ################################################################################
@@ -97,7 +104,7 @@ protein_diaas <- protein_diaas %>%
 # match food items to protein
  # match food items to proein
   
-adjust_lysine <- function(data, set_lysine_multiplier = 1.25) {
+adjust_lysine <- function(data, set_lysine_multiplier ) {
     
     figure_path <<- case_when(set_lysine_multiplier == 1 ~ "figures/protein/base/",
                               set_lysine_multiplier ==1.25 ~ "figures/protein/lysine_25/",
@@ -109,16 +116,27 @@ adjust_lysine <- function(data, set_lysine_multiplier = 1.25) {
                 by = c("Item_Code" = "item_code")) %>%
       left_join(ind_202223_fct_amino_acids %>% select(-protein_g), by = c("Item_Code" = "item_code")) %>%
       left_join(mol_db, by = "s_num") %>%
-      left_join(protein_diaas, by = "s_num") %>% 
+      left_join(protein_digestibility, by = "s_num") %>% 
       mutate(
         protein_g = (Total_Consumption_Quantity / 100) * protein_g,
+        lysine_g_50 = case_when(
+          #item codes for wheat 62,107, 108
+          Item_Code %in% c(62, 107, 108) ~ (protein_g / 100) * as.numeric(lysine_g) * ratio_lys *1.5,
+          TRUE ~ (as.numeric(protein_g) / 100) * as.numeric(lysine_g) * ratio_lys,
+        ),
+        lysine_g_25 = case_when(
+          #item codes for wheat 62,107, 108
+          Item_Code %in% c(62, 107, 108) ~ (protein_g / 100) * as.numeric(lysine_g) * ratio_lys *1.25,
+          TRUE ~ (as.numeric(protein_g) / 100) * as.numeric(lysine_g) * ratio_lys,
+        ),
         
         lysine_g = case_when(
           #item codes for wheat 62,107, 108
-          Item_Code %in% c(62, 107, 108) ~ (protein_g / 100) * as.numeric(lysine_g) * ratio_lys*1.25,
+          Item_Code %in% c(62, 107, 108) ~ (protein_g / 100) * as.numeric(lysine_g) * ratio_lys *1,
           TRUE ~ (as.numeric(protein_g) / 100) * as.numeric(lysine_g) * ratio_lys,
         ),
-      
+       
+       
         tryptophan_g = (protein_g / 100) * as.numeric(tryptophan_g) * ratio_tryp,
         methionine_g = (protein_g / 100) * methionine_g * ratio_meth,
         cystine_g = (protein_g / 100) * cystine_g * ratio_cyst,
@@ -130,7 +148,7 @@ adjust_lysine <- function(data, set_lysine_multiplier = 1.25) {
         valine_g = (protein_g / 100) * valine_g * ratio_val,
         
         energy_kcal = (Total_Consumption_Quantity / 100) * energy_kcal,
-        protein_adjust_g = (diaas/100)*protein_g
+        protein_adjust_g = prot_diget*protein_g
       )
   }
   
@@ -146,7 +164,7 @@ household_amino_acids <- item_level_amino_acids %>%
   group_by(common_id) %>% 
   summarise(
     across(
-      c(lysine_g,tryptophan_g,methionine_g,cystine_g,threonine_g,histidine_g,isoleucine_g,leucine_g,phenylalanine_g,valine_g, energy_kcal, protein_adjust_g),
+      c(lysine_g,lysine_g_25, lysine_g_50,tryptophan_g,methionine_g,cystine_g,threonine_g,histidine_g,isoleucine_g,leucine_g,phenylalanine_g,valine_g, energy_kcal, protein_adjust_g),
       ~sum(., na.rm = TRUE)
     )
   ) %>% 
@@ -159,8 +177,11 @@ household_amino_acids <- item_level_amino_acids %>%
   mutate(multiplier = as.numeric(multiplier))
   
 
+# sanity check
 household_amino_acids %>% 
-  select(lysine_g)
+  select(lysine_g, lysine_g_25,lysine_g_50) %>% 
+  ggplot(aes(x = lysine_g, y = lysine_g_50))+
+  geom_point(alpha = 0.5)
 
 
 
@@ -182,7 +203,7 @@ median_aa_intake <- function(...){
     ) %>% 
     srvyr::summarise(
       across(
-        c(protein_adjust_g,lysine_g, tryptophan_g,cystine_g,methionine_g,threonine_g,histidine_g,isoleucine_g,leucine_g,phenylalanine_g,valine_g),
+        c(protein_adjust_g,lysine_g,lysine_g_25, lysine_g_50,tryptophan_g,cystine_g,methionine_g,threonine_g,histidine_g,isoleucine_g,leucine_g,phenylalanine_g,valine_g),
         list(
           median = ~survey_quantile(., 0.5,na.rm = TRUE),
           Q1 = ~survey_quantile(., 0.25, na.rm = TRUE),
@@ -253,6 +274,7 @@ intake_map <- function(amino_acid,
     tm_fill(col = "grey77") +
     tm_shape(nss_region_aa_intake_sp) +
     tm_fill(col = {{amino_acid}}, style = "cont",
+            # breaks =  seq(1.4,2.8,0.4),
             palette = "Reds",
             title = paste({{title}},"intake"),
             legend.is.portrait = TRUE
@@ -307,6 +329,20 @@ if (set_lysine_multiplier == 1) {
 
 print("Figures saved successfully!")
 
+
+# 
+  amino_acids <- c(
+    "lysine_g_median_q50" = "Lysine",
+    "lysine_g_25_median_q50" = "Lysine25",
+    "lysine_g_50_median_q50" = "Lysine50"
+  )
+  
+  # Apply function to save each amino acid intake map
+  lapply(names(amino_acids), function(x) save_intake_map(x, amino_acids[x]))
+
+
+  
+  
 # prevalence of inadequacy -----------------------------------------------------
 
 # RDA 
