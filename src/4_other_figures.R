@@ -6,7 +6,7 @@
 
 # Author: Gabriel Battcock
 # Created: 
-# Last updated: 22 Oct 2024
+# Last updated: 28 May 2025
 
 ## Load packages ###############################################################
 
@@ -53,15 +53,12 @@ food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_co
 # food group data
 ind_nss_hdds <- read_xlsx(paste0(raw_path, "ind_nss2223_hdds.xlsx"),sheet = 1)
 
+ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
 ## Descriptive data ############################################################
 
+# sep quintile
 
-
-
-
-
-######## sep quintile
 
 hh_expenditure <- 
   data_list$level15 %>% 
@@ -91,7 +88,7 @@ hh_expenditure <-
   select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile, fsu_serial_no ) %>% 
   left_join(level01 %>% select(common_id, state,multiplier ) %>% mutate(multiplier = as.numeric(multiplier)), by= 'common_id')
 
-
+#calculate proportion in lowest quintile 
 state_qutintile <- hh_expenditure%>% 
   as_survey_design(ids = common_id, strata = sector, weights = multiplier) %>% 
   group_by(state) %>% 
@@ -100,7 +97,7 @@ state_qutintile <- hh_expenditure%>%
   )
 
 
-
+# people receiving PDS as proportion
 pds_totals <- data_list$level04 %>% 
   left_join(hh_expenditure %>% select(common_id, sector,state,fsu_serial_no ), by= 'common_id') %>% 
   mutate(multiplier = as.numeric(multiplier),
@@ -115,16 +112,11 @@ pds_totals <- data_list$level04 %>%
     total = sum(ifelse(hh_used_ration_card_30days=="1",1,0))
   )
 
+# proportion using a ration card
 data_list$level04 %>% 
   left_join(hh_expenditure %>% select(common_id, sector,state,fsu_serial_no ), by= 'common_id') %>% 
   group_by(sector) %>% 
   summarise(total = sum(ifelse(hh_used_ration_card_30days=="1",1,0)))
-
-table(
-    x$hh_used_ration_card_30days
-    
-  )
-
 
 
 
@@ -156,6 +148,7 @@ write.csv(state_summary, "state_summary.csv")
 
 food_group_cols <- colnames(ind_nss_hdds %>% select(-c(item_code,item_name)))
 
+# make into a data 
 ind_nss_hdds<- ind_nss_hdds %>% 
   pivot_longer(cols = -c(item_code,item_name)) %>% 
   filter(value == 1) %>% 
@@ -217,11 +210,11 @@ state_foodggroup_average <-  food_group_full %>%
     )
   )
 
+################################################################################
 
 
 # create list of micronutrient names
 micronutrient <- c(colnames(state_foodggroup_average[3:12]))
-
 
 
 state_prop_boxes <- function(state_num){
@@ -299,6 +292,8 @@ food_group_full %>%
   summarise(
     across(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg)
     )
+
+
 
 
 x <- 
