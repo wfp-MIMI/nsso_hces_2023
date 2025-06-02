@@ -13,6 +13,7 @@
 *.RDS
 *.svg
 *.dta
+*.xlsx
 
 
 # Not loading .xlsx from inter-output folder
