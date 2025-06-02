@@ -297,7 +297,7 @@ for (i in seq_len(nrow(micronutrient))) {
   ggsave(
     filename = paste0(figure_path,"food_group/", item$micronutrient, ".jpg"),
     plot = p1,
-    height = 8,
+    height = 6.5,
     width = 6,
     dpi = 900
   )
