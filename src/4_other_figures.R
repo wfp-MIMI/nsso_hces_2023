@@ -62,7 +62,7 @@ ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Pr
 
 hh_expenditure <- 
   data_list$level15 %>% 
-  filter(common_id %in% level01$common_id) %>% 
+  # filter(common_id %in% level01$common_id) %>% 
   mutate(hh_size = as.numeric(hh_size)) %>% 
   group_by(common_id,hh_size ) %>% 
   summarise(total = sum(as.numeric(hh_usual_monthly_consumption),na.rm = T)
@@ -70,7 +70,7 @@ hh_expenditure <-
   slice(1) %>% 
   ungroup() %>% 
   mutate(per_capita_expenditure = total/hh_size) %>% 
-  left_join(level01, by= 'common_id') %>%
+  left_join(data_list$level01, by= 'common_id') %>%
   # group_by(sector) %>% 
   mutate(res_quintile =
            case_when(
@@ -86,7 +86,7 @@ hh_expenditure <-
                "5",
            )) %>% 
   select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile, fsu_serial_no ) %>% 
-  left_join(level01 %>% select(common_id, state,multiplier ) %>% mutate(multiplier = as.numeric(multiplier)), by= 'common_id')
+  left_join(data_list$level01 %>% select(common_id, state,multiplier ) %>% mutate(multiplier = as.numeric(multiplier)), by= 'common_id')
 
 #calculate proportion in lowest quintile 
 state_qutintile <- hh_expenditure%>% 
@@ -214,8 +214,11 @@ state_foodggroup_average <-  food_group_full %>%
 
 
 # create list of micronutrient names
-micronutrient <- c(colnames(state_foodggroup_average[3:12]))
-
+micronutrient <- c(colnames(state_foodggroup_average[4:7]),colnames(state_foodggroup_average[9:11]))
+micronutrient <- data.frame(micronutrient = micronutrient,
+                            name = c("Folate", "Iron", " Vitamin B12",
+                                     "Thiamin", "Niacin", "Vitamin B6",
+                                     "Zinc"))
 
 state_prop_boxes <- function(state_num){
   # function reads in a state number and produces proportional box-plots
@@ -227,7 +230,7 @@ for(item in micronutrient){
   p1 <-  state_foodggroup_average %>%
     
     filter(state == state_num & !is.na(food_group)) %>%
-    ggplot(aes(area = !!sym(item),
+    ggplot(aes(area = !!sym(item$micronutrient),
                fill = stringr::str_to_title(
                  str_replace_all(food_group, "_", " and ")   ),
                label =
@@ -237,28 +240,70 @@ for(item in micronutrient){
     geom_treemap() +
     geom_treemap_text( colour = "darkblue", place = "topleft", alpha = 0.6,
                        grow = FALSE,min.size = 6)+
-    labs(title =
-           stringr::str_to_title(stringr::str_split_i(item,
-                                                      "\\_",
-                                                      1)),
-
-    )+
+    labs(title = item$name)+
     scale_fill_brewer(palette = "Set3")+
     # guides(fill=guide_legend())+
     theme(legend.position="bottom",
-          legend.spacing.x = unit(0, 'cm'))+
+          legend.spacing.x = unit(0, 'cm')
+          )+
     guides(fill = guide_legend(title="Food group",label.position = "bottom"))
   # theme(legend.direction = "horizontal", legend.position = "bottom")+
   # guides(fill = "none")+
-  theme_ipsum()
+ 
   mn_fg_plots[[item]] <- p1
 }
   return(mn_fg_plots)
 }
+
+
 state_prop_boxes("32")
+national_foodgroup_average <- national_foodgroup_average %>%
+  mutate(food_group_clean = str_to_title(str_replace_all(food_group, "_", " and ")))
 
 
+for (i in seq_len(nrow(micronutrient))) {
+  item <- micronutrient[i, ]
+  print(item$micronutrient)
+  
+  p1 <- national_foodgroup_average %>%
+    filter(!is.na(food_group)) %>%
+    ggplot(aes(
+      area = !!sym(item$micronutrient),
+      fill = str_to_title(str_replace_all(food_group, "_", " and ")),
+      label = str_to_title(str_replace_all(food_group, "_", " and "))
+    )) +
+    geom_treemap() +
+    geom_treemap_text(
+      colour = "darkblue",
+      place = "topleft",
+      alpha = 0.6,
+      grow = FALSE,
+      min.size = 6
+    ) +
+    labs(title = item$name) +
+    scale_fill_brewer(palette = "Set3") +
+    theme(
+      legend.position = "bottom",
+      legend.spacing.x = unit(0, 'cm')
+    ) +
+    guides(
+      fill = guide_legend(
+        title = "Food group",
+        label.position = "bottom"
+      )
+    )
+  
+  mn_fg_plots[[item$micronutrient]] <- p1
+  ggsave(
+    filename = paste0(figure_path,"food_group/", item$micronutrient, ".jpg"),
+    plot = p1,
+    height = 8,
+    width = 6,
+    dpi = 900
+  )
+}
 
+mn_fg_plots[3]
 nat_fg <- ggpubr::ggarrange(plotlist = mn_fg_plots, common.legend = TRUE)
 
 raj_fg <- ggpubr::ggarrange(plotlist = state_prop_boxes("08"), common.legend = T)
@@ -283,7 +328,7 @@ ggsave(paste0(figure_path,"up_fg.png"), up_fg, height = 8, width = 6)
 ggsave(paste0(figure_path,"tn_fg.png"), tn_fg, height = 8, width = 6)
 ggsave(paste0(figure_path,"ch_fg.png"), ch_fg, height = 8, width = 6)
 ggsave(paste0(figure_path,"mz_fg.png"), mz_fg, height = 8, width = 6)
-ggsave(paste0(figure_path,"nat_fg.png"), nat_fg, height = 8, width = 6)
+ggsave(paste0(figure_path,"food_group/nat_fg.jpg"), nat_fg, height = 8, width = 6, dpi = 900)
 
 
 
@@ -469,20 +514,6 @@ level05_30day %>%
 my_colors <- c( "#90E0EF","#f0bd7e", "#ec8013")
 
 
-# tolerable UL ######################################################
-
-
-wfp_ul <- hh_mn_intake_fort %>% 
-  ggplot(aes(x = iron_mg_fort_wfp))+
-  geom_histogram()+
-  geom_vline(aes(xintercept = 45), color = 'red')+
-  geom_text(x = 53, y = 15000, label = "Tolerable upper limit")+
-  # xlim(0,75)+
-  theme_bw()+
-  xlab("Iron intake (mg)") + 
-  labs(title = "Iron intake",
-       subtitle  = "(fortified to internationally recommended standards)",
-       caption = "0.1% of households above UL")
 
 
 
