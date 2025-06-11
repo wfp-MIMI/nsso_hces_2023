@@ -155,6 +155,12 @@ adjust_lysine <- function(data, set_lysine_multiplier ) {
 #set the value
 set_lysine_multiplier <- 1
 
+
+figure_path <<- case_when(set_lysine_multiplier == 1 ~ "figures/protein/base/",
+                          set_lysine_multiplier ==1.25 ~ "figures/protein/lysine_25/",
+                          set_lysine_multiplier ==1.5 ~ "figures/protein/lysine_50/")
+
+
 item_level_amino_acids <-adjust_lysine(food_consumption_daily_afe, set_lysine_multiplier)
 # rm(mol_db)
 
@@ -274,7 +280,7 @@ intake_map <- function(amino_acid,
     tm_fill(col = "grey77") +
     tm_shape(nss_region_aa_intake_sp) +
     tm_fill(col = {{amino_acid}}, style = "cont",
-            # breaks =  seq(1.4,2.8,0.4),
+            # breaks =  seq(1.4,2.6,0.4),
             palette = "Reds",
             title = paste({{title}},"intake"),
             legend.is.portrait = TRUE
@@ -291,6 +297,10 @@ intake_map <- function(amino_acid,
     tm_legend(show = T)
 }
 
+intake_map("lysine_g_median_q50")
+intake_map("lysine_g_25_median_q50")
+intake_map("lysine_g_50_median_q50")
+
 # Function to save intake data
 save_intake_map <- function(var_name, amino_acid) {
   # Call intake_map function (assuming it generates a plot or some output)
@@ -306,11 +316,12 @@ save_intake_map <- function(var_name, amino_acid) {
 
 
 
-save_intake_map("protein_adjust_g_median_q50", "Protein")
-
 # Only calculate for the base case
 if (set_lysine_multiplier == 1) {
   amino_acids <- c(
+    # "lysine_g_median_q50" = "Lysine",
+    # "lysine_g_25_median_q50" = "Lysine25",
+    # "lysine_g_50_median_q50" = "Lysine50"
     "tryptophan_g_median_q50" = "Tryptophan",
     "cystine_g_median_q50" = "Cystine",
     "methionine_g_median_q50" = "Methionine",
@@ -330,19 +341,6 @@ if (set_lysine_multiplier == 1) {
 print("Figures saved successfully!")
 
 
-# 
-  amino_acids <- c(
-    "lysine_g_median_q50" = "Lysine",
-    "lysine_g_25_median_q50" = "Lysine25",
-    "lysine_g_50_median_q50" = "Lysine50"
-  )
-  
-  # Apply function to save each amino acid intake map
-  lapply(names(amino_acids), function(x) save_intake_map(x, amino_acids[x]))
-
-
-  
-  
 # prevalence of inadequacy -----------------------------------------------------
 
 # RDA 
@@ -375,6 +373,8 @@ inad_aa_intake <- function(...){
       val_rda = 1.43,
       prot_rda = 36.30,
       lys_inad = ifelse(lysine_g<lys_rda, 1,0),
+      lys_inad_25 = ifelse(lysine_g_25<lys_rda, 1,0),
+      lys_inad_50 = ifelse(lysine_g_50<lys_rda, 1,0),
       tryp_inad = ifelse(tryptophan_g<tryp_rda, 1,0),
       cyst_inad = ifelse(cystine_g<cyst_rda,1,0),
       meth_inad = ifelse(methionine_g<meth_rda,1,0),
@@ -392,6 +392,8 @@ inad_aa_intake <- function(...){
       protein_inad = ifelse(protein_adjust_g<prot_rda, 1,0),
       prot_aas = protein_adjust_g/prot_rda,
       lys_aas = lysine_g/lys_rda,
+      lys_aas_25 = lysine_g_25/lys_rda,
+      lys_aas_50 = lysine_g_50/lys_rda,
       tryp_aas = tryptophan_g/tryp_rda,
       cyst_aas = cystine_g/cyst_rda,
       meth_aas = methionine_g/meth_rda,
@@ -411,6 +413,8 @@ inad_aa_intake <- function(...){
     srvyr::group_by(...) %>% 
     srvyr::summarise(
       lys_inad = srvyr::survey_mean(lys_inad == 1, proportion = TRUE, na.rm = TRUE)*100,
+      lys_inad_25 = srvyr::survey_mean(lys_inad_25 == 1, proportion = TRUE, na.rm = TRUE)*100,
+      lys_inad_50 = srvyr::survey_mean(lys_inad_50 == 1, proportion = TRUE, na.rm = TRUE)*100,
       tryp_inad = srvyr::survey_mean(tryp_inad == 1, proportion = TRUE, na.rm = TRUE)*100,
       cyst_inad = srvyr::survey_mean(cyst_inad == 1, proportion = TRUE,na.rm = TRUE )*100,
       meth_inad = srvyr::survey_mean(meth_inad == 1, proportion = TRUE, na.rm = TRUE)*100,
@@ -422,6 +426,8 @@ inad_aa_intake <- function(...){
       val_inad = srvyr::survey_mean(val_inad == 1,proportion = TRUE, na.rm = TRUE)*100,
       protein_inad = srvyr::survey_mean(protein_inad == 1, proportion = TRUE, na.rm = TRUE)*100,
       lys_aas = srvyr::survey_mean(lys_aas,na.rm = TRUE),
+      lys_aas_25 = srvyr::survey_mean(lys_aas_25,na.rm = TRUE),
+      lys_aas_50 = srvyr::survey_mean(lys_aas_50,na.rm = TRUE),
       tryp_aas = srvyr::survey_mean(tryp_aas,na.rm = TRUE),
       cyst_aas = srvyr::survey_mean(cyst_aas,na.rm = TRUE),
       meth_aas = srvyr::survey_mean(meth_aas,na.rm = TRUE),
@@ -511,12 +517,12 @@ save_inad_map <- function(var_name, amino_acid) {
 }
 
 
-
-save_inad_map("lys_inad", "Lysine")
-
 # Only calculate for the base case
 if (set_lysine_multiplier == 1) {
   amino_acids <- c(
+    "lys_inad" = "Lysine",
+    "lys_inad_25" = "Lysine25",
+   "lys_inad_50" = "Lysine50",
     "tryp_inad" = "Tryptophan",
     "cyst_inad" = "Cystine",
     "meth_inad" = "Methionine",
@@ -580,11 +586,14 @@ save_aas_map <- function(var_name, amino_acid) {
 
 
 
-save_aas_map("lys_aas", "Lysine")
+save_aas_map("lys_aas_50", "Lysine")
 
 # Only calculate for the base case
 if (set_lysine_multiplier == 1) {
   amino_acids <- c(
+    "lys_aas" = "Lysine",
+    "lys_aas_25" = "Lysine25",
+    "lys_aas_50" = "Lysine50",
     "tryp_aas" = "Tryptophan",
     "cyst_aas" = "Cystine",
     "meth_aas" = "Methionine",
@@ -795,4 +804,53 @@ other_aa_fg<-other_aa_prop()
 other_aa_fg <- ggpubr::ggarrange(plotlist = other_aa_fg, common.legend = TRUE)
 other_aa_fg <- ggpubr::annotate_figure(other_aa_fg, top = ggpubr::text_grob("National", face = "bold", size = 15))
 ggsave(paste0(figure_path,"other_aa_fg.png"), other_aa_fg, height = 8, width = 6)
+
+
+################################################################################
+ind_202223_fct %>%
+  select(item_code, energy_kcal, protein_g) %>%
+  left_join(ind_202223_fct_amino_acids %>% select(-protein_g), by = "item_code") %>%
+  left_join(mol_db, by = "s_num") %>%
+  left_join(protein_digestibility, by = "s_num") %>% 
+  group_by(item_code) %>% 
+  mutate(
+    
+    lysine_g_50 = case_when(
+      #item codes for wheat 62,107, 108
+      item_code %in% c(62, 107, 108) ~ (protein_g / 100) * as.numeric(lysine_g) * ratio_lys *1.5,
+      TRUE ~ (as.numeric(protein_g) / 100) * as.numeric(lysine_g) * ratio_lys,
+    ),
+    lysine_g_25 = case_when(
+      #item codes for wheat 62,107, 108
+      item_code %in% c(62, 107, 108) ~ (protein_g / 100) * as.numeric(lysine_g) * ratio_lys *1.25,
+      TRUE ~ (as.numeric(protein_g) / 100) * as.numeric(lysine_g) * ratio_lys,
+    ),
+    
+    lysine_g = case_when(
+      #item codes for wheat 62,107, 108
+      item_code %in% c(62, 107, 108) ~ (protein_g / 100) * as.numeric(lysine_g) * ratio_lys *1,
+      TRUE ~ (as.numeric(protein_g) / 100) * as.numeric(lysine_g) * ratio_lys,
+    ),
+    
+    
+    tryptophan_g_adjust = (protein_g / 100) * as.numeric(tryptophan_g) * ratio_tryp,
+    methionine_g_adjust = (protein_g / 100) * methionine_g * ratio_meth,
+    cystine_g_adjust = (protein_g / 100) * cystine_g * ratio_cyst,
+    threonine_g_adjust = (protein_g / 100) * threonine_g * ratio_thre,
+    histidine_g_adjust = (protein_g / 100) * histidine_g * ratio_hist,
+    isoleucine_g_adjust = (protein_g / 100) * isoleucine_g * ratio_iso,
+    leucine_g_adjust = (protein_g / 100) * leucine_g * ratio_leuc,
+    phenylalanine_g_adjust = (protein_g / 100) * phenylalanine_g * ratio_phe,
+    valine_g_adjust = (protein_g / 100) * valine_g * ratio_val,
+    protein_g_adjust = prot_diget*protein_g
+  ) %>% 
+  select(
+    item_code, item_name, 
+    starts_with("ratio"),
+    ends_with("diget"),
+    ends_with("adjust")
+  )
+  
+
+
 
