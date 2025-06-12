@@ -807,9 +807,10 @@ ggsave(paste0(figure_path,"other_aa_fg.png"), other_aa_fg, height = 8, width = 6
 
 
 ################################################################################
-ind_202223_fct %>%
-  select(item_code, energy_kcal, protein_g) %>%
-  left_join(ind_202223_fct_amino_acids %>% select(-protein_g), by = "item_code") %>%
+adjusted_fct <- ind_202223_fct_amino_acids %>% 
+  select(-protein_g) %>% 
+  left_join(ind_202223_fct %>%
+              select(item_code, energy_kcal, protein_g), by = "item_code") %>%
   left_join(mol_db, by = "s_num") %>%
   left_join(protein_digestibility, by = "s_num") %>% 
   group_by(item_code) %>% 
@@ -826,7 +827,7 @@ ind_202223_fct %>%
       TRUE ~ (as.numeric(protein_g) / 100) * as.numeric(lysine_g) * ratio_lys,
     ),
     
-    lysine_g = case_when(
+    lysine_g_adjust = case_when(
       #item codes for wheat 62,107, 108
       item_code %in% c(62, 107, 108) ~ (protein_g / 100) * as.numeric(lysine_g) * ratio_lys *1,
       TRUE ~ (as.numeric(protein_g) / 100) * as.numeric(lysine_g) * ratio_lys,
@@ -841,7 +842,6 @@ ind_202223_fct %>%
     isoleucine_g_adjust = (protein_g / 100) * isoleucine_g * ratio_iso,
     leucine_g_adjust = (protein_g / 100) * leucine_g * ratio_leuc,
     phenylalanine_g_adjust = (protein_g / 100) * phenylalanine_g * ratio_phe,
-    valine_g_adjust = (protein_g / 100) * valine_g * ratio_val,
     protein_g_adjust = prot_diget*protein_g
   ) %>% 
   select(
@@ -850,7 +850,9 @@ ind_202223_fct %>%
     ends_with("diget"),
     ends_with("adjust")
   )
-  
+
+
+write_csv(adjusted_fct, file = paste0(figure_path, "../adjusted_fct.csv"))
 
 
 
