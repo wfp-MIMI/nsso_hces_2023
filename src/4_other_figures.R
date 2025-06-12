@@ -52,8 +52,9 @@ food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_co
 
 # food group data
 ind_nss_hdds <- read_xlsx(paste0(raw_path, "ind_nss2223_hdds.xlsx"),sheet = 1)
-
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
+
+
 
 ## Descriptive data ############################################################
 
@@ -214,9 +215,9 @@ state_foodggroup_average <-  food_group_full %>%
 
 
 # create list of micronutrient names
-micronutrient <- c(colnames(state_foodggroup_average[4:7]),colnames(state_foodggroup_average[9:11]))
-micronutrient <- data.frame(micronutrient = micronutrient,
-                            name = c("Folate", "Iron", " Vitamin B12",
+micronutrient_list <- c(colnames(state_foodggroup_average[4:7]),colnames(state_foodggroup_average[9:11]))
+micronutrient_list <- data.frame(micronutrient = micronutrient_list,
+                            name = c("Folate", "Iron", "Vitamin B12",
                                      "Thiamin", "Niacin", "Vitamin B6",
                                      "Zinc"))
 
@@ -349,8 +350,163 @@ x <-
     prop_poorest = survey_mean(res_quintile  == 1, proportion = T, na.rm = T)
   )
 
+# Pie charts ###################################################################
+micronutrient_list <- read_csv(paste0(processed_path, "india_rice_inad.csv")) %>% 
+  filter(category == 'national') %>% 
+  select(fe_inad,folate_inad, vitb12_inad, thia_inad, niac_inad,vitb6_inad,zn_inad) %>% 
+  pivot_longer(cols = c(fe_inad,folate_inad, vitb12_inad, thia_inad, niac_inad,vitb6_inad,zn_inad)) %>% 
+  mutate(adequacy = round(100-value,0),
+         name = case_when(
+           name == "fe_inad" ~ "Iron",
+           name == "folate_inad" ~ "Folate",
+           name == "vitb12_inad" ~ "Vitamin B12",
+           name == "thia_inad" ~ "Thiamin",
+           name == "niac_inad" ~ "Niacin",
+           name == "vitb6_inad" ~ "Vitamin B6",
+           name == "zn_inad" ~ "Zinc"
+         )) %>% 
+  right_join(micronutrient_list, by = "name")
+
+
+micronutrient_list
+
+create_proportional_pie_v2 <- function(data, micronutrient, proportion_value, item_name) {
   
+  # Ensure micronutrient is a single string
+  if (length(micronutrient) > 1) {
+    stop("micronutrient parameter must be a single column name, not a vector")
+  }
   
+  # Filter and prepare data
+  plot_data <- data %>%
+    filter(!is.na(food_group)) %>%
+    mutate(
+      food_group_clean = str_to_title(str_replace_all(food_group, "_", " and ")),
+      micronutrient_value = .data[[micronutrient]]
+    ) %>%
+    arrange(desc(micronutrient_value))
+  
+  # Calculate proportions and angles
+  total_value <- sum(plot_data$micronutrient_value, na.rm = TRUE)
+  max_degrees <- 360 * (proportion_value / 100)
+  
+  plot_data <- plot_data %>%
+    mutate(
+      percentage = micronutrient_value / total_value * 100,
+      degrees = percentage * (max_degrees / 100),
+      cumsum_degrees = cumsum(degrees),
+      start_degrees = lag(cumsum_degrees, default = 0),
+      mid_degrees = (start_degrees + cumsum_degrees) / 2
+    )
+  
+  # Create manual pie segments
+  pie_segments <- plot_data %>%
+    rowwise() %>%
+    do({
+      angles <- seq(.$start_degrees, .$cumsum_degrees, length.out = 50) * pi / 180
+      data.frame(
+        x = c(0, cos(angles - pi/2)),  # Subtract pi/2 to start from top
+        y = c(0, sin(angles - pi/2)),
+        food_group_clean = .$food_group_clean,
+        percentage = .$percentage
+      )
+    })
+  
+  p1 <- ggplot(pie_segments) +
+    geom_polygon(aes(x = x, y = y, fill = food_group_clean, group = food_group_clean),
+                 color = "white", size = 0.5) +
+    
+    # Add labels
+    geom_text(
+      data = plot_data,
+      aes(x = cos((mid_degrees - 90) * pi / 180) * 0.7,
+          y = sin((mid_degrees - 90) * pi / 180) * 0.7,
+          label = food_group_clean),
+      color = "darkblue",
+      alpha = 0.8,
+      size = 3,
+      fontface = "bold",
+      check_overlap = TRUE
+    ) +
+    
+    # Add percentage labels
+    geom_text(
+      data = filter(plot_data, percentage >= 5),
+      aes(x = cos((mid_degrees - 90) * pi / 180) * 0.4,
+          y = sin((mid_degrees - 90) * pi / 180) * 0.4,
+          label = paste0(round(percentage, 1), "%")),
+      color = "white",
+      size = 2.5,
+      fontface = "bold"
+    ) +
+    
+    coord_fixed() +
+    scale_fill_brewer(palette = "Set3") +
+    labs(
+      title = paste0(item_name, " (", round(proportion_value, 1), "% adequacy)"),
+      fill = "Food group"
+    ) +
+    theme_void() +
+    theme(
+      legend.position = "bottom",
+      legend.spacing.x = unit(0, 'cm'),
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      plot.margin = margin(20, 20, 20, 20)
+    ) +
+    guides(
+      fill = guide_legend(
+        title = "Food group",
+        title.position = "top",
+        title.hjust = 0.5
+      )
+    ) +
+    xlim(c(-1.5, 1.5)) +
+    ylim(c(-1.5, 1.5))
+  
+  return(p1)
+}
+
+
+mn_fg_pie_chart <- list()
+for (i in 1:nrow(micronutrient_list)) {
+  
+  # Extract micronutrient column name and display name
+  micronutrient_col <- micronutrient_list$micronutrient[i]
+  item_name <- micronutrient_list$name[i]
+  proportion_value <- micronutrient_list$adequacy[i]
+  
+  # Use version 2 for better angle control
+  p1 <- create_proportional_pie_v2(
+    data = national_foodgroup_average,
+    micronutrient = micronutrient_col,
+    proportion_value = proportion_value,
+    item_name = item_name
+  )
+  
+  # Store in your list
+  mn_fg_pie_chart[[micronutrient_col]] <- p1
+  
+  # Save the plot
+  ggsave(
+    filename = paste0(figure_path, "food_group/", micronutrient_col, "_pie.jpg"),
+    plot = p1,
+    height = 6.5,
+    width = 6,
+    dpi = 900
+  )
+}
+  
+
+nat_pie_chart <- ggpubr::ggarrange(plotlist = mn_fg_pie_chart, common.legend = TRUE)
+
+
+
+
+
+
+
+
+
 # dumbell plots
 
 
