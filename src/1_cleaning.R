@@ -199,7 +199,7 @@ food_consumption_daily_afe <- food_consumption_daily_afe %>%
   )) %>% 
   select(-log_quantity_g,-upper_cut)
 
-food_consumption_daily_afe %>% 
+food_consumption_daily_afe <- food_consumption_daily_afe %>% 
   group_by(Item_Code) %>% 
   mutate(Total_Consumption_Quantity = ifelse(is.na(Total_Consumption_Quantity),
                                              median(Total_Consumption_Quantity, na.rm =T),
