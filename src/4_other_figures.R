@@ -53,7 +53,9 @@ food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_co
 # food group data
 ind_nss_hdds <- read_xlsx(paste0(raw_path, "ind_nss2223_hdds.xlsx"),sheet = 1)
 ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
-
+res_quintile_db <- read.csv(paste0(processed_path,"india_rice_inad.csv")) %>% 
+  filter(category %in% c("1", "2","Rural 1","Rural 2","Rural 3","Rural 4","Rural 5",
+                         "Urban 1","Urban 2","Urban 3","Urban 4","Urban 5"))
 
 
 ## Descriptive data ############################################################
@@ -80,7 +82,7 @@ hh_expenditure <-
              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[3]]~
                "2",
              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[4]]~
-               "3",
+               "3",,
              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[5]]~
                "4",
              per_capita_expenditure<=quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[6]]~
@@ -143,9 +145,13 @@ state_summary <- state_qutintile %>%
 
 write.csv(state_summary, "state_summary.csv")
 
- ### proportion plots ###########################################################
-
-### proportion plots
+################################################################################
+#                                                                              #
+#                                                                              #
+############################# Proportion plots #################################
+#                                                                              #
+#                                                                              #
+################################################################################
 
 food_group_cols <- colnames(ind_nss_hdds %>% select(-c(item_code,item_name)))
 
@@ -341,16 +347,13 @@ food_group_full %>%
 
 
 
-
-x <- 
-  hh_expenditure %>% 
-  as_survey_design(ids = common_id, weights = multiplier, strata = sector) %>% 
-  group_by(state) %>% 
-  summarise(
-    prop_poorest = survey_mean(res_quintile  == 1, proportion = T, na.rm = T)
-  )
-
-# Pie charts ###################################################################
+################################################################################
+#                                                                              #
+#                                                                              #
+############################## Pie charts ######################################
+#                                                                              #
+#                                                                              #
+################################################################################
 micronutrient_list <- read_csv(paste0(processed_path, "india_rice_inad.csv")) %>% 
   filter(category == 'national') %>% 
   select(fe_inad,folate_inad, vitb12_inad, thia_inad, niac_inad,vitb6_inad,zn_inad) %>% 
@@ -503,108 +506,431 @@ nat_pie_chart <- ggpubr::ggarrange(plotlist = mn_fg_pie_chart, common.legend = T
 
 
 
+################################################################################
+#                                                                              #
+#                                                                              #
+######################### Dumbell plots ########################################
+#                                                                              #
+#                                                                              #
+################################################################################
 
-
-
-
-# dumbell plots
-
+res_quintile_db <- res_quintile_db %>% 
+  mutate(
+    category = case_when(
+      # category == "1" ~ "Rural Total",
+      # category == "2" ~ "Urban Total",
+      category == "Rural 1" ~ "Rural Poorest",
+      category == "Rural 2" ~ "Rural Poor",
+      category == "Rural 3" ~ "Rural Middle",
+      category == "Rural 4" ~ "Rural Rich",
+      category == "Rural 5" ~ "Rural Richest",
+      category == "Urban 1" ~ "Urban Poorest",
+      category == "Urban 2" ~ "Urban Poor",
+      category == "Urban 3" ~ "Urban Middle",
+      category == "Urban 4" ~ "Urban Rich",
+      category == "Urban 5" ~ "Urban Richest",
+      
+    )
+  ) %>% 
+  filter(!is.na(category))
 
 min_max_iron <- res_quintile_db %>% 
-  group_by(sector, res_quintile) %>%
-  summarise(low = min(fe_inad, fe_inad_fort.x),
-            hi = max(fe_inad, fe_inad_fort.x))
+  group_by(category) %>%
+  summarise(low = min(fe_inad, fe_inad_fort),
+            hi = max(fe_inad, fe_inad_fort))
 
 res_quintile_db_iron <-  res_quintile_db %>% 
-  tidyr::pivot_longer(cols = c(fe_inad, fe_inad_fort.x)) %>% 
-  select(res_quintile, name, value)
+  tidyr::pivot_longer(cols = c(fe_inad, fe_inad_fort)) %>% 
+  select(category, name, value)
 
 res_quintile_db_iron <- res_quintile_db_iron %>% 
   left_join(min_max_iron)
 
+# Define category order
+category_levels <- c(
+  "Rural Poorest", "Rural Poor", "Rural Middle", "Rural Rich", "Rural Richest",
+  "Urban Poorest", "Urban Poor", "Urban Middle", "Urban Rich", "Urban Richest"
+)
+category_labels_clean <- gsub("^(Rural|Urban) ", "", category_levels)
 
-res_quintile_db_iron %>% 
-  ungroup() %>% 
-  mutate(res_quintile = factor(case_when(
-    res_quintile == "1_1" ~ "Rural Poorest",
-    res_quintile == "1_2" ~ "Rural Poor",
-    res_quintile == "1_3"~ "Rural Middle",
-    res_quintile == "1_4" ~ "Rural Rich",
-    res_quintile == "1_5" ~ "Rural Richest",
-    res_quintile == "2_1" ~ "Urban Poorest",
-    res_quintile == "2_2" ~ "Urban Poor",
-    res_quintile == "2_3" ~ "Urban Middle",
-    res_quintile == "2_4" ~ "Urban Rich",
-    res_quintile == "2_5" ~ "Urban Richest"
-  ), levels = c("Rural Poorest","Rural Poor","Rural Middle","Rural Rich","Rural Richest",
-                "Urban Poorest", "Urban Poor","Urban Middle","Urban Rich","Urban Richest")),
-  scenario = ifelse(name== "fe_inad", "Base", "Current standards"),
-  Residence = ifelse(sector == 1, "Rural", "Urban")
-  ) %>% 
-  
-  ggplot()+
-  geom_pointrange(aes(x = res_quintile, y =value, ymin = low, ymax = hi, color = scenario, shape = Residence)) +
-  theme_bw()+
-  coord_flip(ylim = c(0, 100)) + 
-  ylim(0,100)+
-  theme(legend.position = "bottom") +
-  labs(y = "Prevelence of inadequacy",
-       x = ""
-  ) +
-  labs(
-    title = "Iron"
+# Prepare changes
+res_quintile_changes <- res_quintile_db %>%
+  mutate(
+    change = round((fe_inad_fort - fe_inad)*100/fe_inad, 0),
+    change_label = paste0(ifelse(change < 0, "", "+"), change, "%"),
+    midpoint = (fe_inad + fe_inad_fort) / 2,
+    category_ordered = factor(category, levels = category_levels),
+    area_group = ifelse(grepl("Urban", category), "Urban", "Rural")
   )
 
-#
+# Merge for plotting
+plot_data <- res_quintile_db_iron %>%
+  ungroup() %>%
+  mutate(scenario = ifelse(name == "fe_inad", "No fortification", "Current Indian standards (2018)")) %>%
+
+  left_join(
+    res_quintile_changes %>%
+      select(category, change, change_label, midpoint, category_ordered, area_group),
+    by = "category"
+  ) %>%
+  mutate(
+    category = factor(category, levels = category_levels),
+    category_label = gsub("^(Rural|Urban) ", "", category),
+    group_label = case_when(
+      category == "Rural Middle" ~ "Rural",
+      category == "Urban Middle" ~ "Urban",
+      TRUE ~ ""
+    )
+  ) %>%
+  arrange(category)
+
+# Get y positions
+y_positions <- levels(plot_data$category)
+rural_ymin <- 0.5
+rural_ymax <- 5.5
+urban_ymin <- 5.5
+urban_ymax <- 10.5
 
 
-min_max_fol <- res_quintile_db %>% 
-  group_by(sector, res_quintile) %>%
+
+# Plot
+dumbell_iron <- ggplot(plot_data) +
+  # Shaded rectangles
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = rural_ymin, ymax = rural_ymax,
+           fill = "#f9f9f9") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = urban_ymin, ymax = urban_ymax,
+           fill = "#eaf3f9") +
+  
+ 
+  geom_segment(aes(x = hi, xend = low, y = category, yend = category),
+               color = "grey40", size = 1.25, alpha = 0.6) +
+  # Points
+  geom_point(aes(x = value, y = category, color = scenario),
+             size = 4, alpha = 0.9, stroke = 1) +
+  geom_segment(aes(x = 60, xend = 50, y = urban_ymin, ymax = urban_ymin),
+               size = 1.5, alpha = 1,
+               arrow = arrow())+
+  
+  # Change labels
+  geom_text(aes(x = midpoint, y = category, label = change_label),
+            vjust = -0.8, size = 3.5, fontface = "bold", color = "grey20") +
+  
+  # Group labels (Rural/Urban once)
+  geom_text(aes(x = 30, y = category, angle = 90, label = group_label),
+            hjust = 1, fontface = "bold", size = 5) +
+
+  
+  # Manual colors/shapes
+  scale_color_manual(values = c("No fortification" = "#e74c3c",
+                                "Current Indian standards (2018)" = "#27ae60")) +
+  scale_shape_manual(values = c("No fortification" = 16,
+                                "Current Indian standards (2018)" = 17)) +
+  
+  # Axes
+  scale_y_discrete(limits = category_levels, labels = category_labels_clean) +
+  scale_x_continuous(labels = function(x) paste0(x, "%"),
+                     limits = c(-10, 100), expand = c(0.01, 0)) +
+  xlab("Risk of micronutrient intake inadequacy (percentage reduction)")+
+  ylab("Socio-economic quintile")+
+  labs(caption = "Source: NSS HCES 2022-23")+
+  ggtitle("Iron")+
+  # Theme
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_line(color = "grey95", size = 0.5),
+    panel.grid.major.x = element_line(color = "grey95", size = 0.3),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(size = 16, face = "bold", margin = margin(b = 10)),
+    plot.subtitle = element_text(size = 12, color = "grey40", margin = margin(b = 20)),
+    axis.text.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.text = element_text(size = 11),
+    plot.margin = margin(20, 30, 20, 80)
+  )+
+  xlim(30,80)
+
+
+ggsave(
+  plot = dumbell_iron,
+  filename = paste0(figure_path, 
+                  "bar_plots/briefs/dumbell_iron.jpg"),
+  height = 7,
+  width = 8,
+  dpi = 900
+  
+)
+
+  #### FOLATE 
+
+min_max_folate <- res_quintile_db %>% 
+  group_by(category) %>%
   summarise(low = min(folate_inad, folate_inad_fort),
             hi = max(folate_inad, folate_inad_fort))
 
-res_quintile_db_fol <-  res_quintile_db %>% 
+res_quintile_db_iron <-  res_quintile_db %>% 
   tidyr::pivot_longer(cols = c(folate_inad, folate_inad_fort)) %>% 
-  select(res_quintile, name, value)
+  select(category, name, value)
 
-res_quintile_db_fol <- res_quintile_db_fol %>% 
-  left_join(min_max)
+res_quintile_db_iron <- res_quintile_db_iron %>% 
+  left_join(min_max_folate)
 
+# Define category order
+category_levels <- c(
+  "Rural Poorest", "Rural Poor", "Rural Middle", "Rural Rich", "Rural Richest",
+  "Urban Poorest", "Urban Poor", "Urban Middle", "Urban Rich", "Urban Richest"
+)
+category_labels_clean <- gsub("^(Rural|Urban) ", "", category_levels)
 
-res_quintile_db_fol %>% 
-  ungroup() %>% 
-  mutate(res_quintile = factor(case_when(
-    res_quintile == "1_1" ~ "Rural Poorest",
-    res_quintile == "1_2" ~ "Rural Poor",
-    res_quintile == "1_3"~ "Rural Middle",
-    res_quintile == "1_4" ~ "Rural Rich",
-    res_quintile == "1_5" ~ "Rural Richest",
-    res_quintile == "2_1" ~ "Urban Poorest",
-    res_quintile == "2_2" ~ "Urban Poor",
-    res_quintile == "2_3" ~ "Urban Middle",
-    res_quintile == "2_4" ~ "Urban Rich",
-    res_quintile == "2_5" ~ "Urban Richest"
-  ), levels = c("Rural Poorest","Rural Poor","Rural Middle","Rural Rich","Rural Richest",
-                "Urban Poorest", "Urban Poor","Urban Middle","Urban Rich","Urban Richest")),
-  scenario = ifelse(name== "folate_inad", "Base", "Current standards"),
-  Residence = ifelse(sector == 1, "Rural", "Urban")
-  ) %>% 
-  
-  ggplot()+
-  geom_pointrange(aes(x = res_quintile, y =value, ymin = low, ymax = hi, color = scenario, shape = Residence))+
-  theme_bw()+
-  coord_flip(ylim = c(0, 100)) + 
-  ylim(0,100)+
-  theme(legend.position = "bottom") +
-  labs(y = "Prevelence of inadequacy",
-       x = ""
-  ) +
-  labs(
-    title = "Folate"
+# Prepare changes
+res_quintile_changes <- res_quintile_db %>%
+  mutate(
+    change = round((folate_inad_fort - folate_inad)*100/folate_inad, 0),
+    change_label = paste0(ifelse(change < 0, "", "+"), change, "%"),
+    midpoint = (folate_inad + folate_inad_fort) / 2,
+    category_ordered = factor(category, levels = category_levels),
+    area_group = ifelse(grepl("Urban", category), "Urban", "Rural")
   )
 
+# Merge for plotting
+plot_data <- res_quintile_db_iron %>%
+  ungroup() %>%
+  mutate(scenario = ifelse(name == "folate_inad", "No fortification", "Current Indian standards (2018)")) %>%
+  
+  left_join(
+    res_quintile_changes %>%
+      select(category, change, change_label, midpoint, category_ordered, area_group),
+    by = "category"
+  ) %>%
+  mutate(
+    category = factor(category, levels = category_levels),
+    category_label = gsub("^(Rural|Urban) ", "", category),
+    group_label = case_when(
+      category == "Rural Middle" ~ "Rural",
+      category == "Urban Middle" ~ "Urban",
+      TRUE ~ ""
+    )
+  ) %>%
+  arrange(category)
+
+# Get y positions
+y_positions <- levels(plot_data$category)
+rural_ymin <- 0.5
+rural_ymax <- 5.5
+urban_ymin <- 5.5
+urban_ymax <- 10.5
 
 
+
+# Plot
+dumbell_folate <- ggplot(plot_data) +
+  # Shaded rectangles
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = rural_ymin, ymax = rural_ymax,
+           fill = "#f9f9f9") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = urban_ymin, ymax = urban_ymax,
+           fill = "#eaf3f9") +
+  
+  
+  geom_segment(aes(x = hi, xend = low, y = category, yend = category),
+               color = "grey40", size = 1.25, alpha = 0.6) +
+  # Points
+  geom_point(aes(x = value, y = category, color = scenario),
+             size = 4, alpha = 0.9, stroke = 1) +
+  geom_segment(aes(x = 60, xend = 50, y = urban_ymin, ymax = urban_ymin),
+               size = 1.5, alpha = 1,
+               arrow = arrow())+
+  
+  # Change labels
+  geom_text(aes(x = midpoint, y = category, label = change_label),
+            vjust = -0.8, size = 3.5, fontface = "bold", color = "grey20") +
+  
+  # Group labels (Rural/Urban once)
+  geom_text(aes(x = 25, y = category, angle = 90, label = group_label),
+            hjust = 1, fontface = "bold", size = 5) +
+  
+  
+  # Manual colors/shapes
+  scale_color_manual(values = c("No fortification" = "#e74c3c",
+                                "Current Indian standards (2018)" = "#27ae60")) +
+  scale_shape_manual(values = c("No fortification" = 16,
+                                "Current Indian standards (2018)" = 17)) +
+  
+  # Axes
+  scale_y_discrete(limits = category_levels, labels = category_labels_clean) +
+  scale_x_continuous(labels = function(x) paste0(x, "%"),
+                     limits = c(-10, 100), expand = c(0.01, 0)) +
+  xlab("Risk of micronutrient intake inadequacy (percentage reduction)")+
+  ylab("Socio-economic quintile")+
+  labs(caption = "Source: NSS HCES 2022-23")+
+  ggtitle("Folate")+
+  # Theme
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_line(color = "grey95", size = 0.5),
+    panel.grid.major.x = element_line(color = "grey95", size = 0.3),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(size = 16, face = "bold", margin = margin(b = 10)),
+    plot.subtitle = element_text(size = 12, color = "grey40", margin = margin(b = 20)),
+    axis.text.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.text = element_text(size = 11),
+    plot.margin = margin(20, 30, 20, 80)
+  )+
+  xlim(25,80)
+
+
+ggsave(
+  plot = dumbell_folate,
+  filename = paste0(figure_path, 
+                    "bar_plots/briefs/dumbell_folate.jpg"),
+  height = 7,
+  width = 8,
+  dpi = 900
+  
+)
+
+### vitamin b12
+
+min_max_folate <- res_quintile_db %>% 
+  group_by(category) %>%
+  summarise(low = min(vitb12_inad, vitb12_inad_fort),
+            hi = max(vitb12_inad, vitb12_inad_fort))
+
+res_quintile_db_iron <-  res_quintile_db %>% 
+  tidyr::pivot_longer(cols = c(vitb12_inad, vitb12_inad_fort)) %>% 
+  select(category, name, value)
+
+res_quintile_db_iron <- res_quintile_db_iron %>% 
+  left_join(min_max_folate)
+
+# Define category order
+category_levels <- c(
+  "Rural Poorest", "Rural Poor", "Rural Middle", "Rural Rich", "Rural Richest",
+  "Urban Poorest", "Urban Poor", "Urban Middle", "Urban Rich", "Urban Richest"
+)
+category_labels_clean <- gsub("^(Rural|Urban) ", "", category_levels)
+
+# Prepare changes
+res_quintile_changes <- res_quintile_db %>%
+  mutate(
+    change = round((vitb12_inad_fort - vitb12_inad)*100/vitb12_inad, 0),
+    change_label = paste0(ifelse(change < 0, "", "+"), change, "%"),
+    midpoint = (vitb12_inad + vitb12_inad_fort) / 2,
+    category_ordered = factor(category, levels = category_levels),
+    area_group = ifelse(grepl("Urban", category), "Urban", "Rural")
+  )
+
+# Merge for plotting
+plot_data <- res_quintile_db_iron %>%
+  ungroup() %>%
+  mutate(scenario = ifelse(name == "vitb12_inad", "No fortification", "Current Indian standards (2018)")) %>%
+  
+  left_join(
+    res_quintile_changes %>%
+      select(category, change, change_label, midpoint, category_ordered, area_group),
+    by = "category"
+  ) %>%
+  mutate(
+    category = factor(category, levels = category_levels),
+    category_label = gsub("^(Rural|Urban) ", "", category),
+    group_label = case_when(
+      category == "Rural Middle" ~ "Rural",
+      category == "Urban Middle" ~ "Urban",
+      TRUE ~ ""
+    )
+  ) %>%
+  arrange(category)
+
+# Get y positions
+y_positions <- levels(plot_data$category)
+rural_ymin <- 0.5
+rural_ymax <- 5.5
+urban_ymin <- 5.5
+urban_ymax <- 10.5
+
+
+
+# Plot
+dumbell_vitb12 <- ggplot(plot_data) +
+  # Shaded rectangles
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = rural_ymin, ymax = rural_ymax,
+           fill = "#f9f9f9") +
+  annotate("rect", xmin = -Inf, xmax = Inf, ymin = urban_ymin, ymax = urban_ymax,
+           fill = "#eaf3f9") +
+  
+  
+  geom_segment(aes(x = hi, xend = low, y = category, yend = category),
+               color = "grey40", size = 1.25, alpha = 0.6) +
+  # Points
+  geom_point(aes(x = value, y = category, color = scenario),
+             size = 4, alpha = 0.9, stroke = 1) +
+  geom_segment(aes(x = 60, xend = 50, y = urban_ymin, ymax = urban_ymin),
+               size = 1.5, alpha = 1,
+               arrow = arrow())+
+  
+  # Change labels
+  geom_text(aes(x = midpoint, y = category, label = change_label),
+            vjust = -0.8, size = 3.5, fontface = "bold", color = "grey20") +
+  
+  # Group labels (Rural/Urban once)
+  geom_text(aes(x = 25, y = category, angle = 90, label = group_label),
+            hjust = 1, fontface = "bold", size = 5) +
+  
+  
+  # Manual colors/shapes
+  scale_color_manual(values = c("No fortification" = "#e74c3c",
+                                "Current Indian standards (2018)" = "#27ae60")) +
+  scale_shape_manual(values = c("No fortification" = 16,
+                                "Current Indian standards (2018)" = 17)) +
+  
+  # Axes
+  scale_y_discrete(limits = category_levels, labels = category_labels_clean) +
+  scale_x_continuous(labels = function(x) paste0(x, "%"),
+                     limits = c(-10, 100), expand = c(0.01, 0)) +
+  xlab("Risk of micronutrient intake inadequacy (percentage reduction)")+
+  ylab("Socio-economic quintile")+
+  labs(caption = "Source: NSS HCES 2022-23")+
+  ggtitle("Vitamin B12")+
+  # Theme
+  theme_minimal() +
+  theme(
+    panel.grid.major.y = element_line(color = "grey95", size = 0.5),
+    panel.grid.major.x = element_line(color = "grey95", size = 0.3),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(size = 16, face = "bold", margin = margin(b = 10)),
+    plot.subtitle = element_text(size = 12, color = "grey40", margin = margin(b = 20)),
+    axis.text.y = element_text(size = 12),
+    axis.text.x = element_text(size = 10),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    legend.text = element_text(size = 11),
+    plot.margin = margin(20, 30, 20, 80)
+  )+
+  xlim(25,80)
+
+
+ggsave(
+  plot = dumbell_vitb12,
+  filename = paste0(figure_path, 
+                    "bar_plots/briefs/dumbell_vitb12.jpg"),
+  height = 7,
+  width = 8,
+  dpi = 900
+  
+)
+
+
+
+
+################################################################################
+#                                                                              #
+#                                                                              #
+####################### stacked bar chart ######################################
+#                                                                              #
+#                                                                              #
 ################################################################################
 
 # stacked bar chart of consumption patterns of rice
