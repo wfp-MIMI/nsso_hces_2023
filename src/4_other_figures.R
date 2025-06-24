@@ -264,10 +264,16 @@ for(item in micronutrient){
 
 
 state_prop_boxes("32")
-national_foodgroup_average <- national_foodgroup_average %>%
+national_foodgroup_average <-national_foodgroup_average %>%
+    mutate(food_group = case_match(
+      food_group,
+      "fruits" ~ "fruit",
+      "roots_tuber" ~ "roots_tubers",
+      .default = food_group
+    )) %>% 
   mutate(food_group_clean = str_to_sentence(str_replace_all(food_group, "_", " and ")))
 
-
+mn_fg_plots <- list()
 for (i in seq_len(nrow(micronutrient))) {
   item <- micronutrient[i, ]
   print(item$micronutrient)
@@ -276,8 +282,8 @@ for (i in seq_len(nrow(micronutrient))) {
     filter(!is.na(food_group)) %>%
     ggplot(aes(
       area = !!sym(item$micronutrient),
-      fill = str_to_title(str_replace_all(food_group, "_", " and ")),
-      label = str_to_title(str_replace_all(food_group, "_", " and "))
+      fill = str_to_sentence(str_replace_all(food_group, "_", " and ")),
+      label = str_to_sentence(str_replace_all(food_group, "_", " and "))
     )) +
     geom_treemap() +
     geom_treemap_text(
