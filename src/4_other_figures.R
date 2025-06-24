@@ -265,7 +265,7 @@ for(item in micronutrient){
 
 state_prop_boxes("32")
 national_foodgroup_average <- national_foodgroup_average %>%
-  mutate(food_group_clean = str_to_title(str_replace_all(food_group, "_", " and ")))
+  mutate(food_group_clean = str_to_sentence(str_replace_all(food_group, "_", " and ")))
 
 
 for (i in seq_len(nrow(micronutrient))) {

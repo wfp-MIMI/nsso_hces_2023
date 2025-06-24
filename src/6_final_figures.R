@@ -297,7 +297,7 @@ plot_fortification_reduction_vertical <- function(df, micronutrient) {
 
   ggplot(df_long, aes(x = category, y = prevalence, fill = scenario_label)) +
     geom_bar(stat = "identity", position = position_dodge(width = dodge_width)) +
-    ylim(0, 100) +
+    ylim(0, 75) +
     geom_text(
       aes(label = paste0(round(prevalence, 0), "%"), y = 1),
       color = "black",
@@ -584,11 +584,11 @@ ggsave(
 
 # make the plots for rice only India standards #################################
 p1 <-
-  plot_fortification_reduction_horizontal(rice_manita, "fe") #+ theme(legend.position = "none")  # Remove individual legends
+  plot_fortification_reduction_vertical(rice_manita, "fe") #+ theme(legend.position = "none")  # Remove individual legends
 p2 <-
-  plot_fortification_reduction_horizontal(rice_manita, "vitb12") #+ theme(legend.position = "none")
+  plot_fortification_reduction_vertical(rice_manita, "vitb12") #+ theme(legend.position = "none")
 p3 <-
-  plot_fortification_reduction_horizontal(rice_manita, "folate") #+ theme(legend.position = "none")
+  plot_fortification_reduction_vertical(rice_manita, "folate") #+ theme(legend.position = "none")
 
 ggsave(
   plot = p1,
@@ -614,7 +614,7 @@ ggsave(
 
 final_plot <-
   ggpubr::ggarrange(p1, p2, p3,  # The three plots  # Arrange in one row
-                    nrow = 3,
+                    nrow = 1,
                     common.legend = TRUE,
                     legend = 'bottom')
 all_fig <- ggpubr::annotate_figure(
@@ -636,8 +636,8 @@ ggsave(
   paste0(figure_path,"bar_plots/briefs/all_rice_brief.jpg"),
   plot = all_fig,
   device = "jpg",
-  height = 16,
-  width = 9,
+  height = 11,
+  width = 21,
   dpi = 900,
   units = "in"
 )
@@ -647,11 +647,11 @@ ggsave(
 
 # Generate plots for 3 different micronutrients
 p1 <-
-  plot_fortification_reduction_horizontal(only_wheat_comparison, "fe") #+ theme(legend.position = "none")  # Remove individual legends
+  plot_fortification_reduction_vertical(only_wheat_comparison, "fe") #+ theme(legend.position = "none")  # Remove individual legends
 p2 <-
-  plot_fortification_reduction_horizontal(only_wheat_comparison, "vitb12") #+ theme(legend.position = "none")
+  plot_fortification_reduction_vertical(only_wheat_comparison, "vitb12") #+ theme(legend.position = "none")
 p3 <-
-  plot_fortification_reduction_horizontal(only_wheat_comparison, "folate") #+ theme(legend.position = "none")
+  plot_fortification_reduction_vertical(only_wheat_comparison, "folate") #+ theme(legend.position = "none")
 
 ggsave(
   plot = p1,
@@ -677,7 +677,7 @@ ggsave(
 
 final_plot <-
   ggpubr::ggarrange(p1, p2, p3,  # The three plots  # Arrange in one row
-                    nrow = 3,
+                    nrow = 1,
                     common.legend = TRUE,
                     legend = 'bottom')
 all_fig <- ggpubr::annotate_figure(
@@ -699,8 +699,8 @@ ggsave(
   paste0(figure_path,"bar_plots/briefs/all_wheat_brief.jpg"),
   plot = all_fig,
   device = "jpg",
-  height = 16,
-  width = 9,
+  height = 11,
+  width = 27,
   dpi = 900,
   units = "in"
 )
