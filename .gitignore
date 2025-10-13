@@ -15,6 +15,12 @@
 *.dta
 *.xlsx
 
+# shapefiles
+*.prj
+*.shx
+*.shp
+*.dbf
+
 
 # Not loading .xlsx from inter-output folder
 inter-output/*.xlsx
