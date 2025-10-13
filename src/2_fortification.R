@@ -722,13 +722,13 @@ nss_region_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`nss_region`)
 
 # summary csvs
 # write.csv(all_inad_wf,paste(processed_path,"india_wf_inad_v2.csv"))
-write.csv(all_inad_rice,paste(processed_path0,"india_rice_inad.csv" ))
+write.csv(all_inad_rice,paste(processed_path,"india_rice_inad.csv" ))
 # write.csv(all_inad_com_rice, paste(processed_path,'india_rice_com_inad.csv'))
 # write.csv(all_inad_com_wf, paste(processed_path,'india_wf_com_inad.csv'))
 
 # r data for further analysis
 # saveRDS(hh_mn_intake_fort_wf, "ind_fort_wf_v2.rds")
-saveRDS(hh_mn_intake_fort_rice, paste(processed_path0, "ind_fort_rice.rds"))
+saveRDS(hh_mn_intake_fort_rice, paste(processed_path, "ind_fort_rice.rds"))
 # saveRDS(hh_mn_intake_fort_rice_comm, paste(processed_path,"ind_fort_rice_com.rds"))
 # saveRDS(hh_mn_intake_fort_wf_comm, paste(processed_path,"ind_fort_wf_com.rds"))
 # saveRDS(all_vehicles,paste(processed_path, "ind_fort_all.rds"))
