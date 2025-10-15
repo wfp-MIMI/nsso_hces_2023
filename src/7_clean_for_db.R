@@ -22,7 +22,7 @@ rm(list= c("rq_packages", "installed_packages"))
 ################################################################################
 
 path_to_data <- 'data/processed/'
-path_to_save <- 'C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Workstream 5/database_planning/PPG-N analytics team/processed_data/'
+# path_to_save <- 'C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Workstream 5/database_planning/PPG-N analytics team/processed_data/'
 
 # read the data in
 
@@ -67,7 +67,7 @@ ind_nss2223_food_consumption <- ind_nss2223_food_consumption %>%
 
 
 # fct 
-ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
+ind_202223_fct <-  read_xlsx("data/raw/nsso_202223_fct.xlsx")
 
 ind_nss2223_fct <-  ind_202223_fct%>% 
   select(item_code, item_name,
@@ -98,7 +98,7 @@ ind_nss2223_fct <-  ind_202223_fct%>%
          ribo_mg,
          niac_mg,
          vitb6_mg,
-         vitb7_mg,
+       #   vitb7_mg,
          folate_mcg,
          vitb12_mcg,
          fe_mg,
@@ -114,7 +114,7 @@ ind_nss2223_fct <-  ind_202223_fct%>%
 # hh_info
 
 
-nss_raw_level1 <- haven::read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/level01.dta")
+nss_raw_level1 <- haven::read_dta("data/raw/HCES_2022_23/level01.dta")
 
 
 nss_raw_level1 <- nss_raw_level1 %>% 
@@ -205,14 +205,10 @@ ind_nss2223_vehicle_quantities <- bind_rows(rice,wheatflour,salt)
 
 ################################################################################
 
-write_csv(ind_nss2223_base_ai, paste0(path_to_save, "ind_nss2223_base_ai.csv"))
-write_csv(ind_nss2223_food_consumption, paste0(path_to_save, "ind_nss2223_food_consumption.csv"))
-write_csv(ind_nss2223_fct, paste0(path_to_save, "ind_nss2223_fct.csv"))
-write_csv(ind_nss2223_hh_info, paste0(path_to_save, "ind_nss2223_hh_info.csv"))
-write_csv(ind_nss2223_vehicle_quantities, paste0(path_to_save, "ind_nss2223_vehicle_quantities.csv"))
-write_csv(ind_nss_mddw, paste0(path_to_save, "ind_nss2223_food_group.csv"))
-
-#
-
-
-       
+# write_csv(ind_nss2223_base_ai, paste0(path_to_save, "ind_nss2223_base_ai.csv"))
+# write_csv(ind_nss2223_food_consumption, paste0(path_to_save, "ind_nss2223_food_consumption.csv"))
+# write_csv(ind_nss2223_fct, paste0(path_to_save, "ind_nss2223_fct.csv"))
+# write_csv(ind_nss2223_hh_info, paste0(path_to_save, "ind_nss2223_hh_info.csv"))
+# write_csv(ind_nss2223_vehicle_quantities, paste0(path_to_save, "ind_nss2223_vehicle_quantities.csv"))
+# write_csv(ind_nss_mddw, paste0(path_to_save, "ind_nss2223_food_group.csv"))
+      

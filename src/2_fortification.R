@@ -33,9 +33,9 @@ processed_path <- "data/processed/"
 
 
 
-file_list = list.files("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/")
+file_list = list.files("data/raw/HCES_2022_23/")
 # haven::read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/level06.dta")
-data_list <- lapply(paste0("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/",file_list), haven::read_dta)
+data_list <- lapply(paste0("data/raw/HCES_2022_23/",file_list), haven::read_dta)
 names(data_list) <- tools::file_path_sans_ext(file_list)
 level01 <- data_list$level01
 
@@ -44,7 +44,7 @@ food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_co
 hh_mn_intake <- readRDS(paste0(processed_path,"ind_nss2223_base_case.rds"))
 hh_expenditure <- readRDS(paste0(processed_path,"ind_nss2223_hh_expenditure.rds"))
 # read in the fct
-ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
+ind_202223_fct <-  read_xlsx("data/raw/nsso_202223_fct.xlsx")
 
 
 ## Constants ###################################################################
@@ -138,134 +138,9 @@ ind_fort_spec <-
 ## Functions ###################################################################
 
 
+source("functions/aggregated_inadequacy.R")
 
-calculate_inadequacy <- function(micronutrient, ear_cut){return(ifelse(micronutrient<ear_cut,1,0))}
-
-aggregated_inadequacy <- function(data,group){
-  # for each micronutrient and fortification scenario, we compare to the EAR value
-  # then calculate a population risk of inadequacy
-  #
-  # print({{group}})
-  group_sym <- ensym(group) 
-  
-  data %>%
-    mutate(
-      #compare to the estimated average requirement (EAR)
-      folate_inad = ifelse(folate_ug<180,1,0),
-      vitb12_inad = ifelse(vitaminb12_in_mcg< 2, 1,0),
-      thia_inad = ifelse(vitb1_mg<0.9, 1,0),
-      ribo_inad = ifelse(vitb2_mg<2,1, 0),
-      niac_inad = ifelse(vitb3_mg<nin_ear$ear_value[nin_ear$nutrient == "niac_mg"], 1, 0 ),
-      vitb6_inad = ifelse(vitb6_mg <nin_ear$ear_value[nin_ear$nutrient == "vitb6_mg"],1,0 ),
-      vita_inad = ifelse(vita_mcg< nin_ear$ear_value[nin_ear$nutrient == "vita_rae_mcg"],1,0),
-      zn_inad = ifelse(zinc_mg<nin_ear$ear_value[nin_ear$nutrient == "zn_mg"],1,0),
-      
-      folate_inad_fort = ifelse(folate_mcg_fort < 180, 1,0),
-      vitb12_inad_fort = ifelse(vitb12_mcg_fort<2,1,0),
-      thia_inad_fort = ifelse(thia_mg_fort<0.9, 1,0),
-      ribo_inad_fort = ifelse(ribo_mg_fort<2,1, 0),
-      niac_inad_fort = ifelse(niac_mg_fort<nin_ear$ear_value[nin_ear$nutrient == "niac_mg"], 1, 0 ),
-      vitb6_inad_fort = ifelse(vitb6_mg_fort <nin_ear$ear_value[nin_ear$nutrient == "vitb6_mg"],1,0 ),
-      vita_inad_fort = ifelse(vita_rae_mcg_fort< nin_ear$ear_value[nin_ear$nutrient == "vita_rae_mcg"],1,0),
-      zn_inad_fort = ifelse(zn_mg_fort<nin_ear$ear_value[nin_ear$nutrient == "zn_mg"],1,0),
-      
-      folate_inad_fort_wfp = ifelse(folate_mcg_fort_wfp < 180, 1,0),
-      vitb12_inad_fort_wfp = ifelse(vitb12_mcg_fort_wfp<2,1,0),
-      thia_inad_fort_wfp = ifelse(thia_mg_fort_wfp<0.9, 1,0),
-      ribo_inad_fort_wfp = ifelse(ribo_mg_fort_wfp<2,1, 0),
-      niac_inad_fort_wfp = ifelse(niac_mg_fort_wfp<nin_ear$ear_value[nin_ear$nutrient == "niac_mg"], 1, 0 ),
-      vitb6_inad_fort_wfp = ifelse(vitb6_mg_fort_wfp <nin_ear$ear_value[nin_ear$nutrient == "vitb6_mg"],1,0 ),
-      vita_inad_fort_wfp = ifelse(vita_rae_mcg_fort_wfp< nin_ear$ear_value[nin_ear$nutrient == "vita_rae_mcg"],1,0),
-      zn_inad_fort_wfp = ifelse(zn_mg_fort_wfp<nin_ear$ear_value[nin_ear$nutrient == "zn_mg"],1,0)
-      
-      
-    ) %>%
-    left_join(level01 %>%
-                mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>%
-    left_join(hh_expenditure %>% select(common_id, sep_quintile,res_quintile), by = "common_id") %>% 
-    mutate(national  = '1') %>% 
-    as_survey_design(ids = common_id, 
-                     # strata = sector, 
-                     weights = multiplier) %>%
-    srvyr::group_by({{group}}) %>%
-    # srvyr::group_by(sep_quintile) %>%
-    summarise(
-      across(contains("inad"),~survey_mean(. == 1, proportion = T, na.rm = T)*100)
-    ) %>%
-    left_join(
-      fe_full_prob(data %>%
-                     rename(ai_afe = iron_mg) %>%
-                     left_join(level01, by="common_id") %>% 
-                     left_join(hh_expenditure %>% select(common_id, sep_quintile,res_quintile), by = "common_id") %>% 
-                     mutate(national = '1')           ,
-                   group1 = {{group}}, bio_avail = 10) %>%
-        rename(!!group_sym := subpopulation,
-               fe_inad = prev_inad)
-      
-    ) %>%
-    left_join(
-      fe_full_prob(data %>%
-                     rename(ai_afe = fe_mg_fort) %>%
-                     left_join(level01, by="common_id")%>% 
-                     left_join(hh_expenditure %>% select(common_id, sep_quintile,res_quintile), by = "common_id") %>% 
-                     mutate(national = '1') ,
-                   group1 = {{group}}, bio_avail = 10) %>%
-        rename(!!group_sym := subpopulation,
-               fe_inad_fort = prev_inad)
-    ) %>%
-    left_join(
-      fe_full_prob(data %>%
-                     rename(ai_afe = fe_mg_fort_wfp) %>%
-                     left_join(level01, by="common_id")%>% 
-                     left_join(hh_expenditure %>% select(common_id, sep_quintile,res_quintile), by = "common_id") %>%
-                     mutate(national = '1') , 
-                   group1 = {{group}},
-                   # group1 = `state`,
-                   bio_avail = 10) %>%
-        rename(!!group_sym := subpopulation,
-               fe_inad_fort_wfp = prev_inad)
-    )
-}
-
-
-contributions <- function(vehicle = "rice"){
-  ## takes quantity of vehicle consumed and combines the standards for that 
-  ## vehicle to result in the contribution of each mn to the hhs intake
-  
-  
-  if(vehicle == "rice"){
-    selected_item =c(061,101)
-  }else if (vehicle == "wheat"){
-    selected_item = c(062,107)
-  }
-  
-  # print(selected_item)
-  food_consumption_daily_afe %>% 
-    select(
-      common_id,Item_Code, Total_Consumption_Quantity) %>% 
-  filter(Item_Code %in% selected_item) %>% 
-  # mutate(Home_Produce_Quantity = as.numeric(Home_Produce_Quantity),
-  #        # remove any of the home produced quantity
-  #        Purchased_Quantity = Total_Consumption_Quantity - Home_Produce_Quantity) %>%
-  left_join(ind_fort_spec, by = "Item_Code") %>%
-  mutate(
-    across(
-      ends_with("_fort"),
-      ~.x*(Total_Consumption_Quantity/100)
-    ),
-    across(
-      ends_with("_wfp"),
-      ~.x*(Total_Consumption_Quantity/100)
-    )
-  ) %>%
-  group_by(common_id) %>%
-  summarise(
-    across(-c(Item_Code),
-           ~sum(., na.rm = TRUE))
-  )
-
-  
-}
+source("functions/contributions.R")
 
 ## Analysis ####################################################################
 
