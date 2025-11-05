@@ -23,7 +23,7 @@ rm(list= c("rq_packages", "installed_packages"))
 
 # sorce iron full probability functions
 
-source(here::here("../MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"))
+source(here::here("../git/MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"))
 
 ################################################################################
 # set paths

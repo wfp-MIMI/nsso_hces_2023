@@ -1,6 +1,7 @@
 *.csv
 *.png
 *.jpg
+*.json
 
 
 *.Rproj.user
@@ -22,7 +23,12 @@
 *.shp
 *.dbf
 
+data/raw/shapefiles
+data/raw/India-State-and-Country-Shapefile-Updated-Jan-2020-master
+
 
 # Not loading .xlsx from inter-output folder
 inter-output/*.xlsx
 inter-output/*.csv
+
+air.toml
