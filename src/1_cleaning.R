@@ -6,7 +6,7 @@
 # Author: Gabriel Battcock
 # Created: 
 # Last updated: 29 April 24
-
+rm(list = ls())
 rq_packages <- c("tidyverse","dplyr","readr","srvyr","ggplot2", "tidyr",
                  "ggridges", "gt", "haven","foreign",
                  "tmap","sf","rmapshaper","readxl","hrbrthemes",
@@ -21,18 +21,18 @@ rm(list= c("rq_packages", "installed_packages"))
 
 #-------------------------------------------------------------------------------
 
-file_list = list.files("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/")
+file_list = list.files("data/raw/HCES_2022_23/")
 # haven::read_dta("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/level06.dta")
-data_list <- lapply(paste0("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/",file_list), haven::read_dta)
+data_list <- lapply(paste0("data/raw/HCES_2022_23/",file_list), haven::read_dta)
 names(data_list) <- tools::file_path_sans_ext(file_list)
 
 
-ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
+# ind_state <- sf::st_read("data/raw/shapefiles/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lCss1819_adm2.shp")
-nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
+nss_region_shapefile <- sf::st_read("data/raw/shapefiles//ind_nss2223_nssregion.shp")
 
 # read in the fct
-ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
+ind_202223_fct <-  read_xlsx("data/raw/nsso_202223_fct.xlsx")
 
 # AFE CALCUTATION ##############################################################
 
@@ -140,18 +140,19 @@ level05_30day <-
            )) %>% 
   left_join(ind_202223_fct %>% select(item_code, edible_portion), by = c("Item_Code" = "item_code")) %>%
   #convert all values to quantity grammes per day with edible portions
-  mutate(Total_Consumption_Quantity = (as.numeric(Total_Consumption_Quantity)/30)*1000*edible_portion) %>% 
+  mutate(Total_Consumption_Quantity_day = (as.numeric(Total_Consumption_Quantity)/30)*1000*edible_portion) %>% 
   select(-edible_portion) %>% 
   left_join(hh_afe, by = "common_id") %>% 
   # adjust for afe
-  mutate(Total_Consumption_Quantity = Total_Consumption_Quantity/afe) 
+  mutate(Total_Consumption_Quantity_day_afe = Total_Consumption_Quantity_day/afe) 
 
-
-
+x <- level05_30day  %>% select(Item_Code, Total_Consumption_Quantity, Total_Consumption_Quantity_day, Total_Consumption_Quantity_day_afe)
+x %>% group_by(Item_Code) %>% 
+  summarise(quantile(Total_Consumption_Quantity_day_afe, .50))
 # 7 day recall 
 
 #read conversion factors
-conversion_factor <- read_csv("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/conversion_factors.csv")
+conversion_factor <- read_csv("data/raw/conversion_factors.csv")
 
 level05_7day <- level05 %>% 
   mutate(Item_Code = as.numeric(Item_Code)) %>% 
@@ -216,6 +217,29 @@ unmerged <- anti_join(food_consumption_daily_afe, ind_202223_fct, by=c("Item_Cod
   distinct(Item_Code)
 
 # all unmerged are on purpose as they are sub-totals of other food items
+foods_away = c(76,280,281,282,283,284)
+food_consumption_daily_afe23 <- read_csv("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/food_consumption23.csv")
+food_consumption_daily_afe23 <- food_consumption_daily_afe23 %>% filter(common_id %in% food_consumption_daily_afe$common_id) %>% 
+  filter(!Item_Code %in%foods_away)
+food_consumption_daily_afe23 %>% filter(Item_Code == 13)
+
+
+hh_mn_intake23 <- food_consumption_daily_afe23 %>% 
+  inner_join(ind_202223_fct , by=c("Item_Code" ="item_code" )) %>% 
+  mutate(quantity_100g = Total_Consumption_Quantity/100,
+         # calculate mn contributions from each food item 
+         across(c(energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg ),
+                ~.x*quantity_100g)
+  ) %>% 
+  select(c(common_id,energy_kcal,folate_ug,iron_mg, vitaminb12_in_mcg, vitb1_mg, vitb2_mg, vitb3_mg, vitb6_mg, zinc_mg, vita_mcg)) %>% 
+  group_by(common_id) %>% 
+  summarise(
+    across(
+      # sum for each hh the mn intake
+      everything(),
+      ~sum(., na.rm = T)
+    )
+  )
 
 
 hh_mn_intake <- food_consumption_daily_afe %>% 
@@ -236,8 +260,13 @@ hh_mn_intake <- food_consumption_daily_afe %>%
   )
 
 
+test <- bind_rows(hh_mn_intake %>% mutate(data = "orginal"), hh_mn_intake23 %>% mutate(data = "new"))
 
-# for lucia
+test %>% 
+  ggplot(aes(x = energy_kcal, fill = data))+
+  geom_histogram(alpha = 0.5, position = 'dodge')
+
+# for lucia# for vita_mcglucia
 # ~2% of the total size
 # hh_5000 <- hh_mn_intake[sample(nrow(hh_mn_intake),5000),]
 # 
@@ -264,75 +293,75 @@ summary(hh_mn_intake$energy_kcal)
 
 # sep quintile ################################################################
 ######## 
-
-hh_expenditure <- 
-  data_list$level15 %>% 
-  filter(common_id %in% level01$common_id) %>% 
-  mutate(hh_size = as.numeric(hh_size)) %>% 
-  group_by(common_id,hh_size ) %>% 
-  summarise(total = sum(as.numeric(hh_usual_monthly_consumption),na.rm = T)
-  ) %>% 
-  slice(1) %>% 
-  ungroup() %>% 
-  mutate(per_capita_expenditure = total/hh_size) %>% 
-  left_join(level01, by= 'common_id') %>%
-  group_by(sector) %>% 
-  mutate(res_quintile =
-           case_when(
-             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[2]]~
-               "1",
-             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[3]]~
-               "2",
-             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[4]]~
-               "3",
-             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[5]]~
-               "4",
-             per_capita_expenditure<=quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[6]]~
-               "5",
-           )) %>% 
-  ungroup() %>% 
-  mutate(sep_quintile =
-           case_when(
-             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[2]]~
-               "1",
-             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[3]]~
-               "2",
-             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[4]]~
-               "3",
-             per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[5]]~
-               "4",
-             per_capita_expenditure<=quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[6]]~
-               "5",
-           )) %>% 
-  select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile,sep_quintile)
-
-
-# histogram of total consumption/expenditure
-hh_expenditure %>% 
-  ggplot(aes(x = total))+
-  geom_histogram()+
-  xlim(0,100000)
-
-hh_expenditure %>% 
-  group_by(sep_quintile) %>% 
-  summarise(
-    n = n()
-  )
-
-hh_expenditure %>% 
-  summarise(n())
-
-hh_expenditure %>% 
-  group_by(sector) %>% 
-  summarise(n())
-  
+# 
+# hh_expenditure <- 
+#   data_list$level15 %>% 
+#   filter(common_id %in% level01$common_id) %>% 
+#   mutate(hh_size = as.numeric(hh_size)) %>% 
+#   group_by(common_id,hh_size ) %>% 
+#   summarise(total = sum(as.numeric(hh_usual_monthly_consumption),na.rm = T)
+#   ) %>% 
+#   slice(1) %>% 
+#   ungroup() %>% 
+#   mutate(per_capita_expenditure = total/hh_size) %>% 
+#   left_join(level01, by= 'common_id') %>%
+#   group_by(sector) %>% 
+#   mutate(res_quintile =
+#            case_when(
+#              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[2]]~
+#                "1",
+#              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[3]]~
+#                "2",
+#              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[4]]~
+#                "3",
+#              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[5]]~
+#                "4",
+#              per_capita_expenditure<=quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[6]]~
+#                "5",
+#            )) %>% 
+#   ungroup() %>% 
+#   mutate(sep_quintile =
+#            case_when(
+#              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[2]]~
+#                "1",
+#              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[3]]~
+#                "2",
+#              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[4]]~
+#                "3",
+#              per_capita_expenditure<quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[5]]~
+#                "4",
+#              per_capita_expenditure<=quantile(per_capita_expenditure,probs = seq(0,1,0.2), na.rm = TRUE)[[6]]~
+#                "5",
+#            )) %>% 
+#   select(common_id,hh_size, total,per_capita_expenditure, sector,res_quintile,sep_quintile)
+# 
+# 
+# # histogram of total consumption/expenditure
+# hh_expenditure %>% 
+#   ggplot(aes(x = total))+
+#   geom_histogram()+
+#   xlim(0,100000)
+# 
+# hh_expenditure %>% 
+#   group_by(sep_quintile) %>% 
+#   summarise(
+#     n = n()
+#   )
+# 
+# hh_expenditure %>% 
+#   summarise(n())
+# 
+# hh_expenditure %>% 
+#   group_by(sector) %>% 
+#   summarise(n())
+#   
 ### Save data
 
 
-saveRDS(hh_expenditure, file = "ind_nss2223_hh_expenditure.rds")
-saveRDS(food_consumption_daily_afe, file = "ind_nss2223_food_consumption.rds")
-saveRDS(hh_mn_intake, file = "ind_nss2223_base_case.rds")
-saveRDS(hh_afe, file = "data/processed/ind_nss2223_afe.rds")
+# saveRDS(hh_expenditure, file = "ind_nss2223_hh_expenditure.rds")
+saveRDS(food_consumption_daily_afe23, file = "data/processed/ind_nss2223_food_consumption.rds")
+saveRDS(hh_mn_intake23, file = "ind_nss2223_base_case.rds")
+# saveRDS(hh_afe, file = "data/processed/ind_nss2223_afe.rds")
 
 rm(list = ls())
 

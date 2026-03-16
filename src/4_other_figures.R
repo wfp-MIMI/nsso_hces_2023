@@ -153,6 +153,49 @@ write.csv(state_summary, "state_summary.csv")
 #                                                                              #
 ################################################################################
 
+
+
+
+# Helper: map food groups to intuitive colors
+food_group_palette <- function(groups) {
+  # Base mapping (you can adapt names to match your taxonomy)
+  base_map <- c(
+    "Meat"                       = "#D62728", # red
+    "Fish"           = "#B2182B", # dark red
+    "Milk"                       = "#3182BD", # blue
+    "Eggs"                       = "#FB9A06", # egg yolk
+    
+    "Vegetables"                 = "#31A390", # green
+    "Fruit"                     = "#74C410", # light green
+    "pulses_legumes_nuts"         = "#7E3F8F", # purple
+    "Cereals"                    = "#BCBD22", # soft green-yellow
+    "roots_tuber"           = "#BDB76B", # khaki
+    "Oil"              = "#FFD700", # yellow
+    "Sugar"                      = "#F7B6D2", # light pink
+    "Beverages"                  = "#17BECF", # teal
+    "Misc"              = "#9E9E9E"  # grey
+  )
+  
+  # Normalize the incoming group names to the same style your plot uses
+  # (Title case, underscores → " and ")
+  norm_names <- stringr::str_to_title(stringr::str_replace_all(groups, "_", " and "))
+  
+  # Start with a default color for anything not in base_map
+  default_col <- "#B0B0B0" # neutral grey
+  
+  # Build a vector with length = unique groups in the plot
+  col_vec <- vapply(norm_names, function(g) {
+    if (!is.na(base_map[g])) base_map[g] else default_col
+  }, FUN.VALUE = character(1))
+  
+  # Return as a named vector (names must match the levels in fill)
+  names(col_vec) <- norm_names
+  col_vec
+}
+
+
+
+
 food_group_cols <- colnames(ind_nss_hdds %>% select(-c(item_code,item_name)))
 
 # make into a data 
@@ -549,37 +592,37 @@ create_proportional_bar <- function(data, micronutrient, proportion_value, item_
               .groups = "drop") %>%
     mutate(percentage = micronutrient_value / sum(micronutrient_value) * 100)
   
+  # Build palette for the current plot's groups
+  fg_cols <- food_group_palette(unique(plot_data$food_group_clean))
+  
   # Plot
-  p <- ggplot(plot_data,
-              aes(x = 1, 
-                  y = percentage,
-                  fill = food_group_clean)) +
-    geom_bar(stat = "identity", width = 0.5, color = "white") +
-    
-    # Percent labels inside segments >5%
-    geom_text(
-      aes(label = ifelse(percentage >= 5,
-                         paste0(round(percentage, 0), "%"),
-                         "")),
-      position = position_stack(vjust = 0.5),
+  p <- ggplot2::ggplot(
+    plot_data,
+    ggplot2::aes(x = 1, y = percentage, fill = food_group_clean)
+  ) +
+    ggplot2::geom_bar(stat = "identity", width = 0.5, color = "white") +
+    ggplot2::geom_text(
+      ggplot2::aes(label = ifelse(percentage >= 5, paste0(round(percentage, 0), "%"), "")),
+      position = ggplot2::position_stack(vjust = 0.5),
       color = "black",
       size = 3.2
     ) +
-    
-    scale_fill_brewer(palette = "Set3") +
-    coord_flip() +
-    labs(
-      title = paste0(item_name, " (", proportion_value, "% adequacy)"),
-      x = NULL, y = NULL,
-      fill = "Food group"
+    ggplot2::scale_fill_manual(
+      values = fg_cols,
+      guide = ggplot2::guide_legend(title = "Food group")
     ) +
-    theme_minimal(base_size = 12) +
-    theme(
-      axis.text.y = element_blank(),
-      axis.ticks.y = element_blank(),
-      panel.grid = element_blank(),
+    ggplot2::coord_flip() +
+    ggplot2::labs(
+      title = paste0(item_name, " (", proportion_value, "% adequacy)"),
+      x = NULL, y = NULL
+    ) +
+    ggplot2::theme_minimal(base_size = 12) +
+    ggplot2::theme(
+      axis.text.y = ggplot2::element_blank(),
+      axis.ticks.y = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
       legend.position = "bottom",
-      plot.title = element_text(hjust = 0.5, face = "bold")
+      plot.title = ggplot2::element_text(hjust = 0.5, face = "bold")
     )
   
   return(p)
