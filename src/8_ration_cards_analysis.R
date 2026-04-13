@@ -301,8 +301,87 @@ table1 |>
 
 # fortification ------------------------------------------------------------
 
+# FUNCTIONS ###
+plot_inadequacy_slope <- function(
+  data,
+  group,
+  nutrient,
+  nutrient_name,
+  title_prefix = "Change in",
+  group_label = NULL,
+  save_path = NULL
+) {
+  clean_data <- data %>%
+    select({{ group }}, source, starts_with(nutrient)) %>%
+    rename(
+      value_Base = !!sym(nutrient),
+      se_Base = !!sym(paste0(nutrient, "_se")),
+      value_Fortified = !!sym(paste0(nutrient, "_fort")),
+      se_Fortified = !!sym(paste0(nutrient, "_fort_se")),
+      value_FortifiedWFP = !!sym(paste0(nutrient, "_fort_wfp")),
+      se_FortifiedWFP = !!sym(paste0(nutrient, "_fort_wfp_se"))
+    )
+
+  long_data <- clean_data %>%
+    pivot_longer(
+      cols = -c({{ group }}, source),
+      names_to = c(".value", "scenario"),
+      names_sep = "_"
+    )
+
+  p <- ggplot(
+    long_data,
+    aes(
+      x = scenario,
+      y = value,
+      group = interaction({{ group }}, source),
+      color = {{ group }},
+      shape = source
+    )
+  ) +
+    geom_line(size = 1.2) +
+    geom_point(size = 3) +
+    scale_shape_manual(values = c("Rice" = 16, "Wheat Flour" = 17)) +
+    scale_color_brewer(palette = "Set2") +
+    geom_errorbar(aes(ymin = value - se, ymax = value + se), width = 0.1) +
+    geom_text(aes(label = round(value, 1)), vjust = -0.8, size = 3) +
+    theme_minimal() +
+    labs(
+      title = paste(title_prefix, nutrient_name, "Inadequacy Across Scenarios"),
+      x = "Scenario",
+      y = "% Inadequacy",
+      color = group_label %||% rlang::as_name(enquo(group)),
+      shape = "Fortification Source"
+    ) +
+    theme(legend.position = "bottom")
+
+  if (!is.null(save_path)) {
+    if (!dir.exists(save_path)) {
+      dir.create(save_path, recursive = TRUE)
+    }
+    ggsave(
+      filename = paste0(save_path, "/", nutrient_name, "_slope_chart.png"),
+      plot = p,
+      width = 8,
+      height = 6
+    )
+  }
+
+  return(p)
+}
+
+# DATA
+
 hh_rice_fort <- readRDS("data/processed/ind_fort_rice.rds")
 hh_wf_fort <- readRDS("data/processed/ind_fort_wf_v2.rds")
+
+
+hh_rice_fort <- hh_rice_fort %>%
+  mutate(source = "Rice")
+
+hh_wf_fort <- hh_wf_fort %>%
+  mutate(source = "Wheat Flour")
+
 
 hh_rice_fort <- hh_rice_fort |>
   select(
@@ -327,94 +406,36 @@ hh_rice_fort <- hh_rice_fort |>
   left_join(ration_card_total) |>
   mutate(res_quintile = paste(res, res_quintile))
 
-national_inad_fort <- general_inadequacy(
-  hh_rice_fort,
-  national,
-  ear_table,
-  scenarios = c("", "_fort", "_fort_wfp")
-)
 
-res_quintile_inad_fort <- general_inadequacy(
-  hh_rice_fort,
-  res_quintile,
-  ear_table,
-  scenarios = c("", "_fort", "_fort_wfp")
-)
+hh_wf_fort <- hh_wf_fort %>%
+  select(
+    common_id,
+    folate_ug,
+    iron_mg,
+    vitaminb12_in_mcg,
+    fe_mg_fort,
+    folate_mcg_fort,
+    vitb12_mcg_fort,
+    fe_mg_fort_wfp,
+    folate_mcg_fort_wfp,
+    vitb12_mcg_fort_wfp
+  ) %>%
+  rename(
+    hhid = common_id,
+    fe_mg = iron_mg,
+    folate_mcg = folate_ug,
+    vitb12_mcg = vitaminb12_in_mcg
+  ) |>
+  left_join(ind_nss2223_hh_info) |>
+  left_join(ration_card_total) |>
+  mutate(res_quintile = paste(res, res_quintile))
 
-rc_inad_fort <- general_inadequacy(
-  hh_rice_fort,
-  ration_card_type,
-  ear_table,
-  scenarios = c("", "_fort", "_fort_wfp")
-)
-
-plot_inadequacy_slope <- function(
-  data,
-  roup,
-  nutrient,
-  nutrient_name,
-  title_prefix = "Change in",
-  save_path = NULL
-) {
-  # Step 1: Select and rename columns consistently
-
-  clean_data <- data %>%
-    select({{ group }}, starts_with(nutrient)) %>%
-    rename(
-      value_Base = !!sym(nutrient),
-      se_Base = !!sym(paste0(nutrient, "_se")),
-      value_Fortified = !!sym(paste0(nutrient, "_fort")),
-      se_Fortified = !!sym(paste0(nutrient, "_fort_se")),
-      value_FortifiedWFP = !!sym(paste0(nutrient, "_fort_wfp")),
-      se_FortifiedWFP = !!sym(paste0(nutrient, "_fort_wfp_se"))
-    )
-  # Step 2: Pivot longer
-  #
-  long_data <- clean_data %>%
-    pivot_longer(
-      cols = -{{ group }},
-      names_to = c(".value", "scenario"),
-      names_sep = "_"
-    )
-
-  # Step 3: Plot slope chart with error bars
-  p <- ggplot(
-    long_data,
-    aes(x = scenario, y = value, group = {{ group }}, color = {{ group }})
-  ) +
-    geom_line(size = 1.2) +
-    geom_point(size = 3) +
-    scale_color_brewer(palette = "Set2") +
-    geom_errorbar(aes(ymin = value - se, ymax = value + se), width = 0.1) +
-    geom_text(aes(label = round(value, 1)), vjust = -0.8, size = 3) +
-    theme_minimal() +
-    labs(
-      title = paste(title_prefix, nutrient_name, "Inadequacy Across Scenarios"),
-      x = "Scenario",
-      y = "% Inadequacy",
-      color = rlang::as_name(enquo(group))
-    ) +
-    theme(legend.position = "bottom")
-
-  # Step 4: Save if path provided
-  if (!is.null(save_path)) {
-    if (!dir.exists(save_path)) {
-      dir.create(save_path, recursive = TRUE)
-    }
-    ggsave(
-      filename = paste0(save_path, "/", nutrient_name, "_slope_chart.png"),
-      plot = p,
-      width = 8,
-      height = 6
-    )
-  }
-  return(p)
-}
 
 # Nutrients and names
-#
-nutrients <- c("folate_mcg_inad", "vitb12_mcg_inad", "fe_inad")
+
+nutrients <- c("folate_mcg_inad", "vitb12_mcg_inad", "fe_mg_inad")
 nutrient_names <- c("Folate", "Vitamin_B12", "Iron")
+
 
 # For ration_card_type
 plots_rc <- Map(
@@ -424,6 +445,7 @@ plots_rc <- Map(
       group = ration_card_type,
       nutrient,
       name,
+      group_label = "Ration Card Type",
       save_path = "figures/ration_cards"
     )
   },
@@ -444,3 +466,74 @@ plots_rq <- Map(
   nutrients,
   nutrient_names
 )
+
+
+rc_inad_rice <- general_inadequacy(
+  hh_rice_fort,
+  ration_card_type,
+  ear_table,
+  scenarios = c("", "_fort", "_fort_wfp")
+) %>%
+  mutate(source = "Rice")
+
+rc_inad_wf <- general_inadequacy(
+  hh_wf_fort,
+  ration_card_type,
+  ear_table,
+  scenarios = c("", "_fort", "_fort_wfp")
+) %>%
+  mutate(source = "Wheat Flour")
+
+rc_inad_combined <- bind_rows(rc_inad_rice, rc_inad_wf)
+
+
+plots_rc <- Map(
+  function(nutrient, name) {
+    plot_inadequacy_slope(
+      rc_inad_combined,
+      group = ration_card_type,
+      nutrient,
+      name,
+      save_path = "figures/ration_cards/combined"
+    )
+  },
+  nutrients,
+  nutrient_names
+)
+
+
+plots_rc <- Map(
+  function(nutrient, name) {
+    plot_inadequacy_slope(
+      rc_inad_wf,
+      group = ration_card_type,
+      nutrient,
+      name,
+      group_label = "Ration Card Type",
+      save_path = "figures/ration_cards"
+    )
+  },
+  nutrients,
+  nutrient_names
+)
+
+# national_inad_fort <- general_inadequacy(
+#   hh_rice_fort,
+#   national,
+#   ear_table,
+#   scenarios = c("", "_fort", "_fort_wfp")
+# )
+
+# res_quintile_inad_fort <- general_inadequacy(
+#   hh_rice_fort,
+#   res_quintile,
+#   ear_table,
+#   scenarios = c("", "_fort", "_fort_wfp")
+# )
+
+# rc_inad_fort <- general_inadequacy(
+#   hh_rice_fort,
+#   ration_card_type,
+#   ear_table,
+#   scenarios = c("", "_fort", "_fort_wfp")
+# )

@@ -25,7 +25,7 @@ rm(list= c("rq_packages", "installed_packages"))
 
 # sorce iron full probability functions
 
-source(here::here("../MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"))
+source(here::here("../git/MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"))
 
 ## Load data ###################################################################
 
@@ -41,7 +41,7 @@ processed_path <- "data/processed/"
 # shape files
 ind_state <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Workstream 2/Nutrition analysis/shapefiles/IND/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp")
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
-nss_region_shapefile <- sf::st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp")
+nss_region_shapefile <- sf::st_read("data/raw/shapefiles/ind_nss2223_nssregion.shp")
 
 # food consumption and adequacy data
 food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_consumption.rds"))
@@ -52,7 +52,7 @@ food_consumption_daily_afe <- readRDS(paste0(processed_path,"ind_nss2223_food_co
 
 # food group data
 ind_nss_hdds <- read_xlsx(paste0(raw_path, "ind_nss2223_hdds.xlsx"),sheet = 1)
-ind_202223_fct <-  read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
+ind_202223_fct <-  read_xlsx("data/raw/nsso_202223_fct.xlsx")
 res_quintile_db <- read.csv(paste0(processed_path,"india_rice_inad.csv")) %>% 
   filter(category %in% c("1", "2","Rural 1","Rural 2","Rural 3","Rural 4","Rural 5",
                          "Urban 1","Urban 2","Urban 3","Urban 4","Urban 5"))
@@ -152,6 +152,49 @@ write.csv(state_summary, "state_summary.csv")
 #                                                                              #
 #                                                                              #
 ################################################################################
+
+
+
+
+# Helper: map food groups to intuitive colors
+food_group_palette <- function(groups) {
+  # Base mapping (you can adapt names to match your taxonomy)
+  base_map <- c(
+    "Meat"                       = "#D62728", # red
+    "Fish"           = "#B2182B", # dark red
+    "Milk"                       = "#3182BD", # blue
+    "Eggs"                       = "#FB9A06", # egg yolk
+    
+    "Vegetables"                 = "#31A390", # green
+    "Fruit"                     = "#74C410", # light green
+    "pulses_legumes_nuts"         = "#7E3F8F", # purple
+    "Cereals"                    = "#BCBD22", # soft green-yellow
+    "roots_tuber"           = "#BDB76B", # khaki
+    "Oil"              = "#FFD700", # yellow
+    "Sugar"                      = "#F7B6D2", # light pink
+    "Beverages"                  = "#17BECF", # teal
+    "Misc"              = "#9E9E9E"  # grey
+  )
+  
+  # Normalize the incoming group names to the same style your plot uses
+  # (Title case, underscores → " and ")
+  norm_names <- stringr::str_to_title(stringr::str_replace_all(groups, "_", " and "))
+  
+  # Start with a default color for anything not in base_map
+  default_col <- "#B0B0B0" # neutral grey
+  
+  # Build a vector with length = unique groups in the plot
+  col_vec <- vapply(norm_names, function(g) {
+    if (!is.na(base_map[g])) base_map[g] else default_col
+  }, FUN.VALUE = character(1))
+  
+  # Return as a named vector (names must match the levels in fill)
+  names(col_vec) <- norm_names
+  col_vec
+}
+
+
+
 
 food_group_cols <- colnames(ind_nss_hdds %>% select(-c(item_code,item_name)))
 
@@ -360,6 +403,8 @@ food_group_full %>%
 #                                                                              #
 #                                                                              #
 ################################################################################
+
+
 micronutrient_list <- read_csv(paste0(processed_path, "india_rice_inad.csv")) %>% 
   filter(category == 'national') %>% 
   select(fe_inad,folate_inad, vitb12_inad, thia_inad, niac_inad,vitb6_inad,zn_inad) %>% 
@@ -374,7 +419,9 @@ micronutrient_list <- read_csv(paste0(processed_path, "india_rice_inad.csv")) %>
            name == "vitb6_inad" ~ "Vitamin B6",
            name == "zn_inad" ~ "Zinc"
          )) %>% 
-  right_join(micronutrient_list, by = "name")
+  right_join(micronutrient_list, by = "name") 
+
+
 
 
 micronutrient_list
@@ -439,15 +486,15 @@ create_proportional_pie_v2 <- function(data, micronutrient, proportion_value, it
     ) +
     
     # Add percentage labels
-    geom_text(
-      data = filter(plot_data, percentage >= 5),
-      aes(x = cos((mid_degrees - 90) * pi / 180) * 0.4,
-          y = sin((mid_degrees - 90) * pi / 180) * 0.4,
-          label = paste0(round(percentage, 1), "%")),
-      color = "white",
-      size = 2.5,
-      fontface = "bold"
-    ) +
+    # geom_text(
+    #   data = filter(plot_data, percentage >= 5),
+    #   aes(x = cos((mid_degrees - 90) * pi / 180) * 0.4,
+    #       y = sin((mid_degrees - 90) * pi / 180) * 0.4,
+    #       label = paste0(round(percentage, 1), "%")),
+    #   color = "white",
+    #   size = 2.5,
+    #   fontface = "bold"
+    # ) +
     
     coord_fixed() +
     scale_fill_brewer(palette = "Set3") +
@@ -476,6 +523,15 @@ create_proportional_pie_v2 <- function(data, micronutrient, proportion_value, it
 }
 
 
+national_foodgroup_average <- national_foodgroup_average%>% 
+  mutate(food_group = case_match(
+    food_group,
+    "fruits" ~ "fruit",
+    "roots_tuber" ~ "roots_tubers",
+    .default = food_group
+  )) 
+
+
 mn_fg_pie_chart <- list()
 for (i in 1:nrow(micronutrient_list)) {
   
@@ -490,14 +546,14 @@ for (i in 1:nrow(micronutrient_list)) {
     micronutrient = micronutrient_col,
     proportion_value = proportion_value,
     item_name = item_name
-  )
+  ) 
   
   # Store in your list
   mn_fg_pie_chart[[micronutrient_col]] <- p1
   
   # Save the plot
   ggsave(
-    filename = paste0(figure_path, "food_group/", micronutrient_col, "_pie.jpg"),
+    filename = paste0(figure_path, "food_group/pie_charts/", micronutrient_col, "_pie.jpg"),
     plot = p1,
     height = 6.5,
     width = 6,
@@ -508,9 +564,103 @@ for (i in 1:nrow(micronutrient_list)) {
 
 nat_pie_chart <- ggpubr::ggarrange(plotlist = mn_fg_pie_chart, common.legend = TRUE)
 
+################################################################################
+#                                                                              #
+#                                                                              #
+######################### Proportional bar######################################
+#                                                                              #
+#                                                                              #
+################################################################################
+
+
+create_proportional_bar <- function(data, micronutrient, proportion_value, item_name) {
+  
+  # Input check
+  if (length(micronutrient) > 1) {
+    stop("micronutrient must be a single column name")
+  }
+  
+  # Prep data
+  plot_data <- data %>%
+    filter(!is.na(food_group)) %>%
+    mutate(
+      food_group_clean = str_to_title(str_replace_all(food_group, "_", " and ")),
+      micronutrient_value = .data[[micronutrient]]
+    ) %>%
+    group_by(food_group_clean) %>%
+    summarise(micronutrient_value = sum(micronutrient_value, na.rm = TRUE),
+              .groups = "drop") %>%
+    mutate(percentage = micronutrient_value / sum(micronutrient_value) * 100)
+  
+  # Build palette for the current plot's groups
+  fg_cols <- food_group_palette(unique(plot_data$food_group_clean))
+  
+  # Plot
+  p <- ggplot2::ggplot(
+    plot_data,
+    ggplot2::aes(x = 1, y = percentage, fill = food_group_clean)
+  ) +
+    ggplot2::geom_bar(stat = "identity", width = 0.5, color = "white") +
+    ggplot2::geom_text(
+      ggplot2::aes(label = ifelse(percentage >= 5, paste0(round(percentage, 0), "%"), "")),
+      position = ggplot2::position_stack(vjust = 0.5),
+      color = "black",
+      size = 3.2
+    ) +
+    ggplot2::scale_fill_manual(
+      values = fg_cols,
+      guide = ggplot2::guide_legend(title = "Food group")
+    ) +
+    ggplot2::coord_flip() +
+    ggplot2::labs(
+      title = paste0(item_name, " (", proportion_value, "% adequacy)"),
+      x = NULL, y = NULL
+    ) +
+    ggplot2::theme_minimal(base_size = 12) +
+    ggplot2::theme(
+      axis.text.y = ggplot2::element_blank(),
+      axis.ticks.y = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
+      legend.position = "bottom",
+      plot.title = ggplot2::element_text(hjust = 0.5, face = "bold")
+    )
+  
+  return(p)
+}
 
 
 
+
+mn_fg_bar_chart <- list()
+for (i in 1:nrow(micronutrient_list)) {
+  
+  # Extract micronutrient column name and display name
+  micronutrient_col <- micronutrient_list$micronutrient[i]
+  item_name <- micronutrient_list$name[i]
+  proportion_value <- micronutrient_list$adequacy[i]
+  
+  # Use version 2 for better angle control
+  p1 <- create_proportional_bar(
+    data = national_foodgroup_average,
+    micronutrient = micronutrient_col,
+    proportion_value = proportion_value,
+    item_name = item_name
+  )
+  
+  # Store in your list
+  mn_fg_bar_chart[[micronutrient_col]] <- p1
+  
+  # Save the plot
+  ggsave(
+    filename = paste0(figure_path, "food_group/bar_charts/", micronutrient_col, "_bar.jpg"),
+    plot = p1,
+    height = 6.5,
+    width = 6,
+    dpi = 900
+  )
+}
+
+nat_bar_chart <- ggpubr::ggarrange(plotlist = mn_fg_bar_chart, common.legend = TRUE)
 
 ################################################################################
 #                                                                              #
