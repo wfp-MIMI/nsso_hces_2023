@@ -37,16 +37,17 @@ source("src/7_clean_for_db.R")
 #---------------------------------------------------------------------------
 
 # set paths
-figure_path <- "figures/"
+figure_path <- "figures/ration_cards/"
 raw_path <- "data/raw/"
 processed_path <- "data/processed/"
 
 file_list = list.files("data/raw/HCES_2022_23/")
+
 data_list <- lapply(
-  paste0("data/raw/HCES_2022_23/", file_list),
+  paste0("data/raw/HCES_2022_23/", file_list[3:4]),
   haven::read_dta
 )
-names(data_list) <- tools::file_path_sans_ext(file_list)
+names(data_list) <- tools::file_path_sans_ext(file_list[3:4])
 
 level04 <- data_list$level04
 level03 <- data_list$level03
@@ -54,6 +55,109 @@ level03 <- data_list$level03
 # household intake
 hh_mn_intake <- readRDS(paste0(processed_path, "ind_nss2223_base_case.rds"))
 
+
+nss_states <- tibble::tibble(
+  adm1 = sprintf("%02d", 1:36),
+  state_name = c(
+    "Jammu & Kashmir",
+    "Himachal Pradesh",
+    "Punjab",
+    "Chandigarh",
+    "Uttarakhand",
+    "Haryana",
+    "Delhi",
+    "Rajasthan",
+    "Uttar Pradesh",
+    "Bihar",
+    "Sikkim",
+    "Arunachal Pradesh",
+    "Nagaland",
+    "Manipur",
+    "Mizoram",
+    "Tripura",
+    "Meghalaya",
+    "Assam",
+    "West Bengal",
+    "Jharkhand",
+    "Odisha",
+    "Chhattisgarh",
+    "Madhya Pradesh",
+    "Gujarat",
+    "Dadra & Nagar Haveli",
+    "",
+    "Maharashtra",
+    "Andhra Pradesh",
+    "Karnataka",
+    "Goa",
+    "Lakshadweep",
+    "Kerala",
+    "Tamil Nadu",
+    "Puducherry",
+    "Andaman & Nicobar Islands",
+    "Telangana"
+  )
+)
+
+library(dplyr)
+library(tibble)
+
+state_order <- tribble(
+  ~region                  , ~state                      ,
+  # ---- Northern ----
+  "Region - Northern"      , "Chandigarh"                ,
+  "Region - Northern"      , "Delhi"                     ,
+  "Region - Northern"      , "Haryana"                   ,
+  "Region - Northern"      , "Himachal Pradesh"          ,
+  "Region - Northern"      , "Jammu & Kashmir"           ,
+  "Region - Northern"      , "Ladakh"                    ,
+  "Region - Northern"      , "Punjab"                    ,
+  "Region - Northern"      , "Rajasthan"                 ,
+  "Region - Northern"      , "Uttarakhand"               ,
+
+  # ---- Central ----
+  "Region - Central"       , "Chhattisgarh"              ,
+  "Region - Central"       , "Madhya Pradesh"            ,
+  "Region - Central"       , "Uttar Pradesh"             ,
+
+  # ---- Eastern ----
+  "Region - Eastern"       , "Andaman & Nicobar Islands" ,
+  "Region - Eastern"       , "Bihar"                     ,
+  "Region - Eastern"       , "Jharkhand"                 ,
+  "Region - Eastern"       , "Odisha"                    ,
+  "Region - Eastern"       , "West Bengal"               ,
+
+  # ---- North-Eastern ----
+  "Region - North-Eastern" , "Arunachal Pradesh"         ,
+  "Region - North-Eastern" , "Assam"                     ,
+  "Region - North-Eastern" , "Manipur"                   ,
+  "Region - North-Eastern" , "Meghalaya"                 ,
+  "Region - North-Eastern" , "Mizoram"                   ,
+  "Region - North-Eastern" , "Nagaland"                  ,
+  "Region - North-Eastern" , "Sikkim"                    ,
+  "Region - North-Eastern" , "Tripura"                   ,
+
+  # ---- Western ----
+  "Region - Western"       , "Dadra & Nagar Haveli"      ,
+  "Region - Western"       , "Goa"                       ,
+  "Region - Western"       , "Gujarat"                   ,
+  "Region - Western"       , "Maharashtra"               ,
+
+  # ---- Southern ----
+  "Region - Southern"      , "Andhra Pradesh"            ,
+  "Region - Southern"      , "Karnataka"                 ,
+  "Region - Southern"      , "Kerala"                    ,
+  "Region - Southern"      , "Lakshadweep"               ,
+  "Region - Southern"      , "Puducherry"                ,
+  "Region - Southern"      , "Tamil Nadu"                ,
+  "Region - Southern"      , "Telangana"
+) %>%
+  mutate(
+    region = factor(region, levels = unique(region)),
+    state = factor(state, levels = state)
+  )
+
+ind_nss2223_hh_info |> filter(adm1 == 27)
+ind_nss2223_hh_info <- ind_nss2223_hh_info |> left_join(nss_states)
 # rearrange dfs
 use_of_rc <- level04 |>
   rename(hhid = common_id)
@@ -69,26 +173,13 @@ type_rc <- level03 |>
       '1' ~ "AAY",
       '2' ~ "BPL",
       '3' ~ "APL",
-      '4' ~ "PPH",
+      '4' ~ "PHH",
       '5' ~ "SFSS",
       '9' ~ "Others"
     )
   )
 
 rm(level03)
-
-##############################
-
-type_rc |>
-  # group_by(ration_card_type) |>
-  # summarise(count = n()) |>
-  ggplot(aes(x = ration_card_type)) +
-  geom_bar()
-
-use_of_rc |>
-  select(hhid, ration_card_item_rice) |>
-  ggplot(aes(ration_card_item_rice)) +
-  geom_bar()
 
 ration_card_total <- type_rc |>
   left_join(
@@ -116,424 +207,619 @@ ration_card_total <- type_rc |>
       ration_card_item_wheat,
       '1' ~ "Yes",
       '' ~ "No"
+    ),
+    aay_phh = case_match(
+      ration_card_type,
+      "AAY" ~ "Yes",
+      "PHH" ~ "Yes",
+      .default = "No"
+    ),
+    any_card = case_match(
+      ration_card_type,
+      "AAY" ~ "Yes",
+      "PHH" ~ "Yes",
+      "BPL" ~ "Yes",
+      'SFSS' ~ "Yes",
+      .default = "No"
     )
   )
 
-# look at
-summary_data <- ration_card_total |>
-  select(-hh_used_ration_card_30days) |>
-  pivot_longer(
-    cols = c(ration_card_item_rice, ration_card_item_wheat),
-    names_to = "food_item_purchased",
-    values_to = "used_ration_card"
-  ) |>
-  left_join(
-    ind_nss2223_hh_info |> select(hhid, ea, res, survey_wgt),
-    by = 'hhid'
-  ) |>
-  filter(!is.na(ea)) |>
-  as_survey_design(ids = "ea", strata = "res", weights = "survey_wgt") |>
-  group_by(ration_card_type, food_item_purchased) %>%
-  summarize(
-    access_rate = survey_mean(
-      used_ration_card == "Yes",
-      proportion = T,
-      vartype = "ci"
-    ) *
-      100,
-    .groups = "drop"
-  )
-
-summary_data |>
-  mutate(
-    food_item_purchased = ifelse(
-      food_item_purchased == "ration_card_item_rice",
-      "PDS Rice",
-      "PDS Wheat"
-    )
-  ) |>
-  ggplot(aes(
-    x = food_item_purchased,
-    y = access_rate,
-    fill = ration_card_type
-  )) +
-
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_text(
-    aes(label = round(access_rate, 0)),
-    position = position_dodge(width = 0.9),
-    vjust = -0.3,
-    size = 3
-  ) +
-  scale_fill_brewer(palette = "Set2") +
-  labs(
-    title = "Access to Potentially Fortifiable Foods via Social Assistance",
-    x = "Food Item",
-    y = "Proportion (%)",
-    fill = "Ration Card Type"
-  ) +
-  theme_minimal()
-
-ggsave(
-  paste0(figure_path, "ration_cards/ration_card_vehicle.png"),
-  width = 8, # inches
-  height = 5, # inches
-  dpi = 300
-)
-
-
-# ------------------------------------------------------------------------
+ind_nss2223_base_ai <- ind_nss2223_base_ai |>
+  select(hhid, fe_mg, folate_mcg, vitb12_mcg)
+# Objective 1 #############################
 
 all_intake <- ind_nss2223_base_ai |>
   left_join(ind_nss2223_hh_info) |>
   left_join(ration_card_total) |>
   mutate(res_quintile = paste(res, res_quintile))
 
+all_intake |> filter(adm1 == 25)
+
+aay_phh <- all_intake |>
+  filter(aay_phh == "Yes")
+
+any_card <- all_intake |>
+  filter(any_card == "Yes")
+
 ear_table <- data.frame(
-  nutrient = c("fe_mg", "folate_mcg", "vitb12_mcg"),
-  ear_value = c(15, 180, 2)
+  nutrient = c("folate_mcg", "vitb12_mcg"),
+  ear_value = c(180, 2)
 )
-# ear_table <- get_har() |>
-#   filter(iso3 == "IND") |>
-#   select(-iso3) |>
-#   pivot_longer(cols = energy_kcal:vitb12_mcg, names_to = "nutrient", values_to = "ear_value")
+# state inad
 
-ration_card_inad <- general_inadequacy(all_intake, ration_card_type, ear_table)
+make_nutrient_gt_o1_1 <- function(df, elgible) {
+  if (elgible) {
+    df_fmt <- df |>
+      filter(!is.na(region)) |>
+      mutate(
+        elgible = sprintf("%.1f (%.1f)", elgible, elgible_se),
+        fe = sprintf("%.1f (%.1f)", fe_inad, fe_inad_se),
+        folate = sprintf("%.1f (%.f)", folate_mcg_inad, folate_mcg_inad_se),
+        vitb12 = sprintf("%.1f (%.1f)", vitb12_mcg_inad, vitb12_mcg_inad_se)
+      ) |>
+      select(region, state_name, elgible, fe, folate, vitb12) |>
+      arrange(region, state_name)
 
-ration_card_inad_paper <- ration_card_inad |>
-  rename(group = ration_card_type) |>
-  select(
-    group,
-    prev_inad,
-    prev_inad_se,
-    folate_mcg_inad,
-    folate_mcg_inad_se,
-    vitb12_mcg_inad,
-    vitb12_mcg_inad_se
-  ) |>
-  mutate(broad = "Ration card type")
+    df_fmt |>
+      gt(
+        rowname_col = "state_name",
+        groupname_col = "region"
+      ) |>
+      cols_label(
+        elgible = "Proportion elgibile \n for PDS",
 
-# economic quintile
+        fe = "Iron (%)",
+        folate = "Folate (%)",
+        vitb12 = "Vitamin B12 (%)"
+      ) |>
+      cols_hide(region)
+  } else {
+    df_fmt <- df |>
+      filter(!is.na(region)) |>
+      mutate(
+        fe = sprintf("%.1f (%.1f)", fe_inad, fe_inad_se),
+        folate = sprintf("%.1f (%.1f)", folate_mcg_inad, folate_mcg_inad_se),
+        vitb12 = sprintf("%.1f (%.1f)", vitb12_mcg_inad, vitb12_mcg_inad_se)
+      ) |>
+      select(region, state_name, fe, folate, vitb12) |>
+      arrange(region, state_name)
 
-res_quin_inad <- general_inadequacy(all_intake, res_quintile, ear_table)
+    df_fmt |>
+      gt(
+        rowname_col = "state_name",
+        groupname_col = "region"
+      ) |>
+      cols_label(
+        fe = "Iron (%)",
+        folate = "Folate (%)",
+        vitb12 = "Vitamin B12 (%)"
+      ) |>
+      cols_hide(region)
+  }
+}
 
-res_quin_inad <- res_quin_inad |>
-  rename(group = res_quintile) |>
-  select(
-    group,
-    prev_inad,
-    prev_inad_se,
-    folate_mcg_inad,
-    folate_mcg_inad_se,
-    vitb12_mcg_inad,
-    vitb12_mcg_inad_se
-  ) |>
-  mutate(broad = "Economic Quintile")
+total_inad <- general_inadequacy(all_intake, group = adm1, ear_table) |>
+  left_join(nss_states) %>%
+  left_join(state_order, by = c("state_name" = "state")) %>%
+  arrange(region, state_name)
 
-# national
-national_inad <- general_inadequacy(all_intake, national, ear_table)
-national_inad <- national_inad |>
-  mutate(group = "National") |>
-  select(
-    group,
-    prev_inad,
-    prev_inad_se,
-    folate_mcg_inad,
-    folate_mcg_inad_se,
-    vitb12_mcg_inad,
-    vitb12_mcg_inad_se
-  ) |>
-  mutate(broad = "")
+general_inadequacy(all_intake, group = NULL, ear_table)
+general_inadequacy(aay_phh, group = NULL, ear_table)
+general_inadequacy(any_card, group = NULL, ear_table)
 
-# create a table with the data
-table1 <- bind_rows(national_inad, res_quin_inad, ration_card_inad_paper)
 
-table1 |>
+gtsave(
+  make_nutrient_gt_o1_1(total_inad, elgible = FALSE),
+  filename = paste0(figure_path, "/objective_1/total_inad.html")
+)
 
-  mutate(
-    fe_display = paste0(round(prev_inad, 1), " (", round(prev_inad_se, 1), ")"),
-    folate_inad_display = paste0(
-      round(folate_mcg_inad, 1),
-      " (",
-      round(folate_mcg_inad_se, 1),
-      ")"
-    ),
-    vitb12_display = paste0(
-      round(vitb12_mcg_inad, 1),
-      " (",
-      round(vitb12_mcg_inad_se, 1),
-      ")"
-    )
-  ) |>
-  select(group, fe_display, folate_inad_display, vitb12_display, broad) |>
-  gt(groupname_col = "broad") |>
-  tab_header(
-    title = "Risk of inadequate micronutrient intake ",
-    subtitle = "Risk (%) by Economic group and ration card type"
-  ) |>
-
-  opt_table_font(
-    font = list(
-      google_font("Roboto"),
-      default_fonts()
-    )
-  ) |>
-
-  cols_label(
-    group = "Population",
-    fe_display = "Iron",
-    folate_inad_display = "Folate",
-    vitb12_display = "Vitamin B12"
-  ) |>
-
-  # fmt_percent() |>
-  tab_style(
-    style = cell_borders(
-      sides = "bottom",
-      color = "gray",
-      weight = px(2)
-    ),
-    locations = cells_body(
-      rows = c(1, 11) # Apply thicker border after row 4
-    )
+all_intake |>
+  as_survey_design(ids = ea, strata = res, weights = survey_wgt) |>
+  summarise(
+    elgible = survey_mean(any_card == "Yes", proportion = T, na.rm = T) * 100
   )
 
 
-# fortification ------------------------------------------------------------
+phh_aay_inad <- general_inadequacy(
+  all_intake |> filter(aay_phh == "Yes"),
+  adm1,
+  ear_table
+) |>
+  left_join(nss_states) %>%
+  left_join(state_order, by = c("state_name" = "state")) %>%
+  arrange(region, state_name) |>
+  left_join(
+    all_intake |>
+      as_survey_design(ids = ea, strata = res, weights = survey_wgt) |>
+      group_by(adm1) |>
+      summarise(
+        elgible = survey_mean(aay_phh == "Yes", proportion = T, na.rm = T) * 100
+      )
+  )
 
-# FUNCTIONS ###
-plot_inadequacy_slope <- function(
-  data,
-  group,
-  nutrient,
-  nutrient_name,
-  title_prefix = "Change in",
-  group_label = NULL,
-  save_path = NULL
-) {
-  clean_data <- data %>%
-    select({{ group }}, source, starts_with(nutrient)) %>%
-    rename(
-      value_Base = !!sym(nutrient),
-      se_Base = !!sym(paste0(nutrient, "_se")),
-      value_Fortified = !!sym(paste0(nutrient, "_fort")),
-      se_Fortified = !!sym(paste0(nutrient, "_fort_se")),
-      value_FortifiedWFP = !!sym(paste0(nutrient, "_fort_wfp")),
-      se_FortifiedWFP = !!sym(paste0(nutrient, "_fort_wfp_se"))
-    )
+gtsave(
+  make_nutrient_gt_o1_1(phh_aay_inad, elgible = TRUE),
+  filename = paste0(figure_path, "/objective_1/phh_aay_inad.html")
+)
 
-  long_data <- clean_data %>%
-    pivot_longer(
-      cols = -c({{ group }}, source),
-      names_to = c(".value", "scenario"),
-      names_sep = "_"
-    )
 
-  p <- ggplot(
-    long_data,
-    aes(
-      x = scenario,
-      y = value,
-      group = interaction({{ group }}, source),
-      color = {{ group }},
-      shape = source
-    )
-  ) +
-    geom_line(size = 1.2) +
-    geom_point(size = 3) +
-    scale_shape_manual(values = c("Rice" = 16, "Wheat Flour" = 17)) +
-    scale_color_brewer(palette = "Set2") +
-    geom_errorbar(aes(ymin = value - se, ymax = value + se), width = 0.1) +
-    geom_text(aes(label = round(value, 1)), vjust = -0.8, size = 3) +
-    theme_minimal() +
-    labs(
-      title = paste(title_prefix, nutrient_name, "Inadequacy Across Scenarios"),
-      x = "Scenario",
-      y = "% Inadequacy",
-      color = group_label %||% rlang::as_name(enquo(group)),
-      shape = "Fortification Source"
-    ) +
-    theme(legend.position = "bottom")
+any_card_inad <- general_inadequacy(
+  all_intake |> filter(any_card == "Yes"),
+  adm1,
+  ear_table
+) |>
+  left_join(nss_states) %>%
+  left_join(state_order, by = c("state_name" = "state")) %>%
+  arrange(region, state_name) |>
+  left_join(
+    all_intake |>
+      as_survey_design(ids = ea, strata = res, weights = survey_wgt) |>
+      group_by(adm1) |>
+      summarise(
+        elgible = survey_mean(any_card == "Yes", proportion = T, na.rm = T) *
+          100
+      )
+  )
 
-  if (!is.null(save_path)) {
-    if (!dir.exists(save_path)) {
-      dir.create(save_path, recursive = TRUE)
-    }
-    ggsave(
-      filename = paste0(save_path, "/", nutrient_name, "_slope_chart.png"),
-      plot = p,
-      width = 8,
-      height = 6
-    )
-  }
+gtsave(
+  make_nutrient_gt_o1_1(any_card_inad, elgible = TRUE),
+  filename = paste0(figure_path, "/objective_1/any_card_inad.html")
+)
 
-  return(p)
+
+make_nutrient_gt_o1_2 <- function(df) {
+  df_fmt <- df |>
+    filter(!is.na(region)) |>
+    mutate(
+      AAY = sprintf("%.1f (%.1f)", AAY, AAY_se),
+      PHH = sprintf("%.1f (%.1f)", PHH, PHH_se),
+      BPL = sprintf("%.1f (%.1f)", BPL, BPL_se),
+      APL = sprintf("%.1f (%.1f)", APL, APL_se),
+      SFSS = sprintf("%.1f (%.1f)", SFSS, SFSS_se)
+    ) |>
+    select(region, state_name, AAY, PHH, BPL, APL, SFSS) |>
+    arrange(region, state_name)
+
+  df_fmt |>
+    gt(
+      rowname_col = "state_name",
+      groupname_col = "region"
+    ) |>
+    # cols_label(
+    #   elgible = "Proportion elgibile \n for PDS",
+
+    #   fe     = "Iron (%)",
+    #   folate = "Folate (%)",
+    #   vitb12 = "Vitamin B12 (%)"
+    # ) |>
+    cols_hide(region)
 }
 
-# DATA
 
-hh_rice_fort <- readRDS("data/processed/ind_fort_rice.rds")
-hh_wf_fort <- readRDS("data/processed/ind_fort_wf_v2.rds")
-
-
-hh_rice_fort <- hh_rice_fort %>%
-  mutate(source = "Rice")
-
-hh_wf_fort <- hh_wf_fort %>%
-  mutate(source = "Wheat Flour")
-
-
-hh_rice_fort <- hh_rice_fort |>
-  select(
-    common_id,
-    folate_ug,
-    iron_mg,
-    vitaminb12_in_mcg,
-    fe_mg_fort,
-    folate_mcg_fort,
-    vitb12_mcg_fort,
-    fe_mg_fort_wfp,
-    folate_mcg_fort_wfp,
-    vitb12_mcg_fort_wfp
+state_rc <- all_intake |>
+  as_survey_design(ids = ea, strata = res, weights = survey_wgt) |>
+  group_by(adm1) |>
+  summarise(
+    AAY = survey_mean(ration_card_type == "AAY", proportion = TRUE, na.rm = T) *
+      100,
+    PHH = survey_mean(ration_card_type == "PHH", proportion = TRUE, na.rm = T) *
+      100,
+    BPL = survey_mean(ration_card_type == "BPL", proportion = TRUE, na.rm = T) *
+      100,
+    APL = survey_mean(ration_card_type == "APL", proportion = TRUE, na.rm = T) *
+      100,
+    SFSS = survey_mean(
+      ration_card_type == "SFSS",
+      proportion = TRUE,
+      na.rm = T
+    ) *
+      100
   ) |>
-  rename(
-    hhid = common_id,
-    fe_mg = iron_mg,
-    folate_mcg = folate_ug,
-    vitb12_mcg = vitaminb12_in_mcg
+  left_join(nss_states) %>%
+  left_join(state_order, by = c("state_name" = "state")) %>%
+  arrange(region, state_name)
+
+
+gtsave(
+  make_nutrient_gt_o1_2(state_rc),
+  filename = paste0(figure_path, "/objective_1/ration_card.html")
+)
+
+
+nat_rc <- all_intake |>
+  as_survey_design(ids = ea, strata = res, weights = survey_wgt) |>
+  summarise(
+    AAY = survey_mean(ration_card_type == "AAY", proportion = TRUE, na.rm = T) *
+      100,
+    PHH = survey_mean(ration_card_type == "PHH", proportion = TRUE, na.rm = T) *
+      100,
+    BPL = survey_mean(ration_card_type == "BPL", proportion = TRUE, na.rm = T) *
+      100,
+    APL = survey_mean(ration_card_type == "APL", proportion = TRUE, na.rm = T) *
+      100,
+    SFSS = survey_mean(
+      ration_card_type == "SFSS",
+      proportion = TRUE,
+      na.rm = T
+    ) *
+      100
+  )
+
+nat_rc
+
+# Objective 2 #############################
+ind_fort_spec <- data.frame(
+  commodity = c("rice", "rice", "wheat", "wheat"),
+  specs = c("India", "WFP", "India", "WFP"),
+  fe_mg = c(
+    3.525,
+    7,
+    1.7625,
+    2
+  ),
+  folate_mcg = c(
+    10,
+    130,
+    8.3,
+    130 * 0.83
+  ),
+  vitb12_mcg = c(
+    0.1,
+    1,
+    0.085,
+    0.85
+  )
+)
+
+# change the selection for different fortification standards
+ind_fort_spec <- ind_fort_spec |>
+  filter(specs == "India")
+
+
+rice <- ind_nss2223_food_consumption |>
+  filter(item_code %in% c(61, 101)) |>
+  group_by(hhid) |>
+  summarise(quantity_g = sum(quantity_g)) |>
+  right_join(ind_nss2223_hh_info, by = 'hhid') |>
+  mutate(
+    quantity_g = quantity_g / afe,
+    consumed = ifelse(is.na(quantity_g), 0, 1)
+  )
+
+wheat <- ind_nss2223_food_consumption |>
+  filter(item_code %in% c(62, 107)) |>
+  group_by(hhid) |>
+  summarise(quantity_g = sum(quantity_g)) |>
+  right_join(ind_nss2223_hh_info, by = 'hhid') |>
+  mutate(
+    quantity_g = quantity_g / afe,
+    consumed = ifelse(is.na(quantity_g), 0, 1)
+  )
+
+
+make_nutrient_gt_o2 <- function(df) {
+  df_fmt <- df |>
+    filter(!is.na(region)) |>
+    mutate(
+      reach = sprintf("%.1f (%.1f)", reach, reach_se),
+      pc_consumption = sprintf("%.1f (%.f)", quantity_g, quantity_g_se),
+      fe = sprintf("%.1f (%.1f)", fe_mg, fe_mg_se),
+      folate = sprintf("%.1f (%.1f)", folate_mcg, folate_mcg_se),
+      vitb12 = sprintf("%.1f (%.1f)", vitb12_mcg, vitb12_mcg_se)
+    ) |>
+    select(region, state_name, reach, pc_consumption, fe, folate, vitb12) |>
+    arrange(region, state_name)
+
+  df_fmt |>
+    gt(
+      rowname_col = "state_name",
+      groupname_col = "region"
+    ) |>
+    cols_label(
+      reach = "Reach",
+      pc_consumption = "Per capita daily consumption",
+      fe = "Iron (mg)",
+      folate = "Folate (µg)",
+      vitb12 = "Vitamin B12 (µg)"
+    ) |>
+    cols_hide(region)
+}
+
+
+wheat_summary <- wheat |>
+  as_survey_design(ids = ea, strata = res, weights = survey_wgt) |>
+  group_by(adm1) |>
+  summarise(
+    reach = survey_mean(consumed == 1, proportion = TRUE, na.rm = T) * 100,
+    quantity_g = survey_mean(quantity_g, na.rm = T)
+  ) |>
+  mutate(
+    # 2 = the wheat specs when filtered for Ind or WFP specs
+    fe_mg = quantity_g * ind_fort_spec$fe_mg[2] / 100,
+    fe_mg_se = quantity_g_se * ind_fort_spec$fe_mg[2] / 100,
+    folate_mcg = quantity_g * ind_fort_spec$folate_mcg[2] / 100,
+    folate_mcg_se = quantity_g_se * ind_fort_spec$folate_mcg[2] / 100,
+    vitb12_mcg = quantity_g * ind_fort_spec$vitb12_mcg[2] / 100,
+    vitb12_mcg_se = quantity_g_se * ind_fort_spec$vitb12_mcg[2] / 100,
+  ) |>
+  left_join(nss_states) |>
+  left_join(state_order, by = c("state_name" = "state")) %>%
+  arrange(region, state_name)
+
+wheat_summary_nat <- wheat |>
+  as_survey_design(ids = ea, strata = res, weights = survey_wgt) |>
+  # group_by(adm1) |>
+  summarise(
+    reach = survey_mean(consumed == 1, proportion = TRUE, na.rm = T) * 100,
+    quantity_g = survey_mean(quantity_g, na.rm = T)
+  ) |>
+  mutate(
+    # 2 = the wheat specs when filtered for Ind or WFP specs
+    fe_mg = quantity_g * ind_fort_spec$fe_mg[2] / 100,
+    fe_mg_se = quantity_g_se * ind_fort_spec$fe_mg[2] / 100,
+    folate_mcg = quantity_g * ind_fort_spec$folate_mcg[2] / 100,
+    folate_mcg_se = quantity_g_se * ind_fort_spec$folate_mcg[2] / 100,
+    vitb12_mcg = quantity_g * ind_fort_spec$vitb12_mcg[2] / 100,
+    vitb12_mcg_se = quantity_g_se * ind_fort_spec$vitb12_mcg[2] / 100,
+  )
+
+
+gtsave(
+  make_nutrient_gt_o2(wheat_summary),
+  filename = paste0(figure_path, "/objective_2/reach_wheat_india.html")
+)
+
+make_nutrient_gt_o2(wheat_summary)
+
+rice_summary <- rice |>
+  as_survey_design(ids = ea, strata = res, weights = survey_wgt) |>
+  group_by(adm1) |>
+  summarise(
+    reach = survey_mean(consumed == 1, proportion = TRUE, na.rm = T) * 100,
+    quantity_g = survey_mean(quantity_g, na.rm = T)
+  ) |>
+  mutate(
+    # 1 = the wheat specs when filtered for Ind or WFP specs
+    fe_mg = quantity_g * ind_fort_spec$fe_mg[1] / 100,
+    fe_mg_se = quantity_g_se * ind_fort_spec$fe_mg[1] / 100,
+    folate_mcg = quantity_g * ind_fort_spec$folate_mcg[1] / 100,
+    folate_mcg_se = quantity_g_se * ind_fort_spec$folate_mcg[1] / 100,
+    vitb12_mcg = quantity_g * ind_fort_spec$vitb12_mcg[1] / 100,
+    vitb12_mcg_se = quantity_g_se * ind_fort_spec$vitb12_mcg[1] / 100,
+  ) |>
+  left_join(nss_states) |>
+  left_join(state_order, by = c("state_name" = "state")) %>%
+  arrange(region, state_name)
+
+rice_summary_nat <- rice |>
+  as_survey_design(ids = ea, strata = res, weights = survey_wgt) |>
+  # group_by(adm1) |>
+  summarise(
+    reach = survey_mean(consumed == 1, proportion = TRUE, na.rm = T) * 100,
+    quantity_g = survey_mean(quantity_g, na.rm = T)
+  ) |>
+  mutate(
+    # 1 = the wheat specs when filtered for Ind or WFP specs
+    fe_mg = quantity_g * ind_fort_spec$fe_mg[1] / 100,
+    fe_mg_se = quantity_g_se * ind_fort_spec$fe_mg[1] / 100,
+    folate_mcg = quantity_g * ind_fort_spec$folate_mcg[1] / 100,
+    folate_mcg_se = quantity_g_se * ind_fort_spec$folate_mcg[1] / 100,
+    vitb12_mcg = quantity_g * ind_fort_spec$vitb12_mcg[1] / 100,
+    vitb12_mcg_se = quantity_g_se * ind_fort_spec$vitb12_mcg[1] / 100,
+  )
+
+gtsave(
+  make_nutrient_gt_o2(rice_summary),
+  filename = paste0(figure_path, "/objective_2/reach_rice_india.html")
+)
+
+# Objective 3 #############################
+
+fort_contributions <- wheat |>
+  select(hhid, quantity_g) |>
+  mutate(
+    fe_mg_fort_wf = quantity_g * ind_fort_spec$fe_mg[2] / 100,
+    folate_mcg_fort_wf = quantity_g * ind_fort_spec$folate_mcg[2] / 100,
+    vitb12_mcg_fort_wf = quantity_g * ind_fort_spec$vitb12_mcg[2] / 100
+  ) |>
+  left_join(ind_nss2223_base_ai) |>
+  left_join(
+    rice |>
+      select(hhid, quantity_g) |>
+      mutate(
+        fe_mg_fort_rice = quantity_g * ind_fort_spec$fe_mg[1] / 100,
+        folate_mcg_fort_rice = quantity_g * ind_fort_spec$folate_mcg[1] / 100,
+        vitb12_mcg_fort_rice = quantity_g * ind_fort_spec$vitb12_mcg[1] / 100,
+      ) |>
+      select(-quantity_g),
+    by = 'hhid'
+  ) |>
+  mutate(across(-c(hhid, quantity_g), ~ ifelse(is.na(.), 0, .)))
+
+
+df_long <- fort_contributions |>
+  mutate(
+    # Base
+    fe_mg_base = fe_mg,
+    folate_mcg_base = folate_mcg,
+    vitb12_mcg_base = vitb12_mcg,
+
+    # Rice
+    fe_mg_rice = fe_mg + fe_mg_fort_rice,
+    folate_mcg_rice = folate_mcg + folate_mcg_fort_rice,
+    vitb12_mcg_rice = vitb12_mcg + vitb12_mcg_fort_rice,
+
+    # Wheat
+    fe_mg_wheat = fe_mg + fe_mg_fort_wf,
+    folate_mcg_wheat = folate_mcg + folate_mcg_fort_wf,
+    vitb12_mcg_wheat = vitb12_mcg + vitb12_mcg_fort_wf,
+
+    # Both
+    fe_mg_both = fe_mg + fe_mg_fort_rice + fe_mg_fort_wf,
+    folate_mcg_both = folate_mcg + folate_mcg_fort_rice + folate_mcg_fort_wf,
+    vitb12_mcg_both = vitb12_mcg + vitb12_mcg_fort_rice + vitb12_mcg_fort_wf
+  ) |>
+  select(
+    hhid,
+    matches("^(fe_mg|folate_mcg|vitb12_mcg)_(base|rice|wheat|both)$")
+  )
+
+df_long |>
+  summarise(
+    mean(fe_mg_base),
+    mean(fe_mg_rice),
+    mean(fe_mg_wheat),
+    mean(fe_mg_both)
+  )
+
+fort_scenarios <- df_long |>
+  pivot_longer(
+    cols = matches("^(fe_mg|folate_mcg|vitb12_mcg)_(base|rice|wheat|both)$"),
+    names_to = c("nutrient", "scenario"),
+    names_pattern = "(.*)_(base|rice|wheat|both)",
+    values_to = "value"
+  ) |>
+  pivot_wider(
+    names_from = nutrient,
+    values_from = value
   ) |>
   left_join(ind_nss2223_hh_info) |>
   left_join(ration_card_total) |>
   mutate(res_quintile = paste(res, res_quintile))
 
 
-hh_wf_fort <- hh_wf_fort %>%
-  select(
-    common_id,
-    folate_ug,
-    iron_mg,
-    vitaminb12_in_mcg,
-    fe_mg_fort,
-    folate_mcg_fort,
-    vitb12_mcg_fort,
-    fe_mg_fort_wfp,
-    folate_mcg_fort_wfp,
-    vitb12_mcg_fort_wfp
-  ) %>%
-  rename(
-    hhid = common_id,
-    fe_mg = iron_mg,
-    folate_mcg = folate_ug,
-    vitb12_mcg = vitaminb12_in_mcg
+fort_scenarios |>
+  filter(scenario == "both") |>
+  summarise(mean(fe_mg))
+
+
+# ── Shared data prep pipeline ──────────────────────────────────────────────────
+
+prep_inadequacy <- function(df) {
+  scen_label <- unique(df$scenario)
+
+  # National estimate (no group)
+  national_row <- df |>
+    general_inadequacy(ear_table = ear_table) |>
+    mutate(
+      scenario = scen_label,
+      state_name = "National",
+      region = "National" # so groupname_col works in gt
+    )
+
+  # State-level estimates
+  state_rows <- df |>
+    general_inadequacy(group = adm1, ear_table = ear_table) |>
+    mutate(scenario = scen_label) |>
+    left_join(nss_states, by = "adm1") |>
+    left_join(state_order, by = c("state_name" = "state")) |>
+    arrange(region, state_name)
+
+  # Bind national on top, then states
+  bind_rows(national_row, state_rows)
+}
+
+# ── gt formatter ──────────────────────────────────────────────────────────────
+
+make_inad_gt <- function(df) {
+  df_fmt <- df |>
+    mutate(
+      folate = sprintf("%.1f (%.1f)", folate_mcg_inad, folate_mcg_inad_se),
+      vitb12 = sprintf("%.1f (%.1f)", vitb12_mcg_inad, vitb12_mcg_inad_se),
+      fe = sprintf("%.1f (%.1f)", fe_inad, fe_inad_se)
+    ) |>
+    select(region, state_name, folate, vitb12, fe) |>
+    filter(!is.na(region))
+
+  df_fmt |>
+    gt(rowname_col = "state_name", groupname_col = "region") |>
+    cols_label(
+      folate = "Folate inadequacy (%)",
+      vitb12 = "Vitamin B12 inadequacy (%)",
+      fe = "Iron inadequacy (%)"
+    ) |>
+    # Bold the national row
+    tab_style(
+      style = cell_text(weight = "bold"),
+      locations = cells_body(rows = state_name == "National")
+    ) |>
+    cols_hide("region")
+}
+
+# ── Single-table builder ───────────────────────────────────────────────────────
+
+make_gt_for_group <- function(scen, card_status = NULL) {
+  label <- if (is.null(card_status)) "All" else paste("Card:", card_status)
+
+  fort_scenarios |>
+    filter(
+      scenario == scen,
+      if (!is.null(card_status)) any_card == card_status else TRUE
+    ) |>
+    prep_inadequacy() |>
+    make_inad_gt() |>
+    tab_header(
+      title = paste0("Scenario: ", scen),
+      subtitle = paste0("Group: ", label)
+    )
+}
+
+# ── Batch table builder ────────────────────────────────────────────────────────
+
+scenarios <- c("base", "rice", "wheat", "both")
+
+subgroups <- list(
+  all = function(df) df,
+  card = function(df) filter(df, any_card == "Yes")
+)
+
+gt_tables <- tidyr::expand_grid(
+  scenario = scenarios,
+  subgroup = names(subgroups)
+) |>
+  mutate(
+    name = paste0(scenario, "_", subgroup),
+    gt = map2(scenario, subgroup, \(scen, grp) {
+      fort_scenarios |>
+        filter(scenario == scen) |>
+        subgroups[[grp]]() |>
+        prep_inadequacy() |>
+        make_inad_gt() |>
+        tab_header(
+          title = paste0("Scenario: ", scen),
+          subtitle = paste0("Group: ", grp)
+        )
+    })
   ) |>
-  left_join(ind_nss2223_hh_info) |>
-  left_join(ration_card_total) |>
-  mutate(res_quintile = paste(res, res_quintile))
+  select(name, gt) |>
+  tibble::deframe()
+
+# ---- Example usage ----
+# View one table
+gt_tables$base_all
+
+# View another
+gt_tables$rice_card
 
 
-# Nutrients and names
+library(flextable)
+library(officer)
+library(htmltools)
 
-nutrients <- c("folate_mcg_inad", "vitb12_mcg_inad", "fe_mg_inad")
-nutrient_names <- c("Folate", "Vitamin_B12", "Iron")
+# ---- Convert gt -> HTML ----
+gt_to_html <- function(gt_tbl) {
+  HTML(as_raw_html(gt_tbl))
+}
 
+# ---- Loop through tables and save each as HTML ----
+for (name in names(gt_tables)) {
+  html_doc <- tagList(
+    tags$h1(name),
+    gt_to_html(gt_tables[[name]])
+  )
 
-# For ration_card_type
-plots_rc <- Map(
-  function(nutrient, name) {
-    plot_inadequacy_slope(
-      rc_inad_fort,
-      group = ration_card_type,
-      nutrient,
-      name,
-      group_label = "Ration Card Type",
-      save_path = "figures/ration_cards"
-    )
-  },
-  nutrients,
-  nutrient_names
-)
-# For res_quintile
-plots_rq <- Map(
-  function(nutrient, name) {
-    plot_inadequacy_slope(
-      res_quintile_inad_fort,
-      group = res_quintile,
-      nutrient,
-      name,
-      save_path = "figures/ration_cards"
-    )
-  },
-  nutrients,
-  nutrient_names
-)
-
-
-rc_inad_rice <- general_inadequacy(
-  hh_rice_fort,
-  ration_card_type,
-  ear_table,
-  scenarios = c("", "_fort", "_fort_wfp")
-) %>%
-  mutate(source = "Rice")
-
-rc_inad_wf <- general_inadequacy(
-  hh_wf_fort,
-  ration_card_type,
-  ear_table,
-  scenarios = c("", "_fort", "_fort_wfp")
-) %>%
-  mutate(source = "Wheat Flour")
-
-rc_inad_combined <- bind_rows(rc_inad_rice, rc_inad_wf)
-
-
-plots_rc <- Map(
-  function(nutrient, name) {
-    plot_inadequacy_slope(
-      rc_inad_combined,
-      group = ration_card_type,
-      nutrient,
-      name,
-      save_path = "figures/ration_cards/combined"
-    )
-  },
-  nutrients,
-  nutrient_names
-)
-
-
-plots_rc <- Map(
-  function(nutrient, name) {
-    plot_inadequacy_slope(
-      rc_inad_wf,
-      group = ration_card_type,
-      nutrient,
-      name,
-      group_label = "Ration Card Type",
-      save_path = "figures/ration_cards"
-    )
-  },
-  nutrients,
-  nutrient_names
-)
-
-# national_inad_fort <- general_inadequacy(
-#   hh_rice_fort,
-#   national,
-#   ear_table,
-#   scenarios = c("", "_fort", "_fort_wfp")
-# )
-
-# res_quintile_inad_fort <- general_inadequacy(
-#   hh_rice_fort,
-#   res_quintile,
-#   ear_table,
-#   scenarios = c("", "_fort", "_fort_wfp")
-# )
-
-# rc_inad_fort <- general_inadequacy(
-#   hh_rice_fort,
-#   ration_card_type,
-#   ear_table,
-#   scenarios = c("", "_fort", "_fort_wfp")
-# )
+  save_html(
+    html_doc,
+    file = paste0(figure_path, "objective_3/", name, "_india", ".html")
+  )
+}

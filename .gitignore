@@ -16,6 +16,8 @@
 *.svg
 *.dta
 *.xlsx
+*.html
+.DS_Store
 
 # shapefiles
 *.prj
