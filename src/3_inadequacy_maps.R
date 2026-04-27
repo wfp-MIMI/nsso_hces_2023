@@ -39,16 +39,16 @@ rm(list = c("rq_packages", "installed_packages"))
 
 # sorce iron full probability functions
 
-source(here::here(
-  "../MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"
-))
+# source(here::here(
+#   "../MIMI1_archive/universal_functions/iron_full_probability/src/iron_inad_prev.R"
+# ))
 
 ################################################################################
 
 # rm(list = ls())
 
 # set paths
-figure_path <- "figures/"
+figure_path <- "figures/ration_cards/maps/"
 raw_path <- "data/raw/"
 processed_path <- "data/processed/"
 
@@ -57,14 +57,14 @@ processed_path <- "data/processed/"
 # ind_202223_fct <- read_xlsx("C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/nsso_202223_fct.xlsx")
 
 level01 <- haven::read_dta(
-  "C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/HCES_2022_23/level01.dta"
+  "data/raw/HCES_2022_23/level01.dta"
 )
 ind_state <- sf::st_read(
-  "C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Workstream 2/Nutrition analysis/shapefiles/IND/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp"
+  "data/raw/India-State-and-Country-Shapefile-Updated-Jan-2020-master/India_State_Boundary.shp"
 )
 # ind_admin2 <- st_read("C:/Users/gabriel.battcock/OneDrive - World Food Programme/General - MIMI Project/Nutrition analysis/shapefiles/ind_lss1819_adm2.shp")
 nss_region_shapefile <- sf::st_read(
-  "C:/Users/gabriel.battcock/OneDrive - World Food Programme/Desktop/ind_nss2223_nssregion.shp"
+  "data/raw/shapefiles/ind_nss2223_nssregion.shp"
 )
 
 nss_region_inad_rice <- readRDS(paste0(
@@ -104,12 +104,7 @@ hh_mn_intake <- readRDS(paste0(processed_path, "ind_nss2223_base_case.rds"))
 ################################################################################
 
 # map function geometry# map function
-
 inadequacy_map <- function(micronutrient, title = "") {
-  # creates a map of risk of inadequate intake for chosen mn and scenario
-  # without a legend
-  # tm_shape(ind_state) +
-  #   tm_borders(col= 'white')+
   tm_shape(ind_state) +
     tm_fill(col = "grey77") +
     tm_shape(nss_region_inad_sp) +
@@ -121,6 +116,7 @@ inadequacy_map <- function(micronutrient, title = "") {
       title = "Prevalence of inadequacy",
       legend.is.portrait = FALSE
     ) +
+    # tm_borders(col = NA) + # <-- hides nss_region borders
     tm_layout(
       main.title = {{ title }},
       frame = F,
@@ -128,14 +124,10 @@ inadequacy_map <- function(micronutrient, title = "") {
       legend.outside.position = "bottom",
       legend.outside.size = 0.35
     ) +
-    # tm_borders(col = "black", lwd = 0.2) +
     tm_shape(ind_state) +
-    # tm_text("State_Name", size = 0.6, remove.overlap = TRUE)+
-    # tm_fill(col = "state") +
     tm_borders(col = "black", lwd = 1.5) +
     tm_legend(show = F)
 }
-
 
 map_list <- function(input_list) {
   #takes in a list of column names of MNs and plots inadequacy maps
@@ -204,12 +196,12 @@ maps_rice_base <- map_list(base_rice)
 maps_rice_current <- map_list(current_rice)
 maps_rice_wfp <- map_list(improved_rice)
 
-maps_rice_current[[1]]
+
 maps_rice_base[[1]]
+maps_rice_current[[1]]
 
 
-figure_path <- "figures/"
-
+# figure_path <- "figures/"
 
 for (i in 1:length(maps_rice_base)) {
   map <- maps_rice_base[[i]]
