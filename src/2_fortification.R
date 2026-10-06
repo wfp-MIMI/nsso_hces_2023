@@ -580,7 +580,7 @@ nss_region_inad <- aggregated_inadequacy(hh_mn_intake_fort_rice,`nss_region`)
 #               mutate(multiplier = as.numeric(multiplier)), by = "common_id") %>%
 #   left_join(hh_expenditure %>% select(common_id, sep_quintile,res_quintile), by = "common_id") %>% 
 #   mutate(national  = '1') %>% 
-#   as_survey_design(ids = common_id, 
+#   as_survey_design(ids = psu, 
 #                    # strata = sector, 
 #                    weights = multiplier) %>%
 #   srvyr::group_by(national) %>%
